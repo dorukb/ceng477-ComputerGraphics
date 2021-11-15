@@ -1,29 +1,17 @@
 #ifndef __helper_h__
 #define __helper_h__
 
-typedef struct
-{
-	float x,y,z;
-} vec3f;
+#include "parser.h"
+using namespace parser;
 
-typedef struct
-{
-	vec3f center;
-	float radius;
-	vec3f color;
-} sphere;
+Vec3f multScaler(const Vec3f &a,float s);
+Vec3f add(const Vec3f &a, const Vec3f &b);
+Vec3f cross(const Vec3f &first, const Vec3f &second);
 
-
-typedef struct
+struct Ray
 {
-	int x,y,z;
-} vec3i;
-typedef struct
-{
-	vec3f o,d;
-} ray;
-
-vec3i **image;
+	Vec3f origin, dir;
+};
 
 #endif // __helper_h__
 //compute eye rays
