@@ -12,9 +12,12 @@ using namespace std;
 Ray generateRay(int i, int j, Camera cam);
 float intersectSphere(Ray r, Sphere s);
 Vec3f computeColor(Ray r);
-
+float determinant(float m [3][3]);
+bool intersectTriangle(Ray ray, Triangle tri);
 
 parser::Scene scene;
+
+
 int main(int argc, char* argv[])
 {
     // Sample usage for reading an XML scene file
@@ -44,7 +47,7 @@ int main(int argc, char* argv[])
 
     // Debug
     Vec3f sCent = scene.vertex_data[scene.spheres[0].center_vertex_id - 1];
-    cout << "sphere center: " << sCent.x << " " << sCent.y << " " << sCent.z << endl;
+    // cout << "sphere center: " << sCent.x << " " << sCent.y << " " << sCent.z << endl;
 
     for(int camIndex = 0; camIndex < cameras.size(); camIndex++)
     {
@@ -77,6 +80,51 @@ int main(int argc, char* argv[])
 
 
 }
+
+
+bool intersectTriangle(Ray ray, Triangle tri)
+{
+    Vec3f a = scene.vertex_data[tri.indices.v0_id - 1];
+    Vec3f b = scene.vertex_data[tri.indices.v1_id - 1];
+    Vec3f c = scene.vertex_data[tri.indices.v2_id - 1];
+
+    float matrixA [3][3] = {a.x - b.x, a.x - c.x, ray.dir.x,
+                            a.y - b.y, a.y - c.y, ray.dir.y,
+                            a.z - b.z, a.z - c.z, ray.dir.z};
+    float detA = determinant(matrixA);
+    if(detA == 0) return false;
+
+    // Cramers Rule
+    float matrixBeta [3][3] = {a.x - ray.origin.x, a.x - c.x, ray.dir.x,
+                               a.y - ray.origin.y, a.y - c.y, ray.dir.y,
+                               a.z - ray.origin.z, a.z - c.z, ray.dir.z};
+    float beta = determinant(matrixBeta) / detA;                      
+    if(beta < 0) return false;
+
+    float matrixGama [3][3] = {a.x - b.x, a.x - ray.origin.x, ray.dir.x,
+                               a.y - b.y, a.y - ray.origin.y, ray.dir.y,
+                               a.z - b.z, a.z - ray.origin.z, ray.dir.z};
+    float gama = determinant(matrixGama) / detA;
+    if(gama < 0 || gama + beta > 1) return false;
+
+    float matrixT[3][3] = {a.x - b.x, a.x - c.x, a.x - ray.origin.x,
+                           a.y - b.y, a.y - c.y, a.y - ray.origin.y,
+                           a.z - b.z, a.z - c.z, a.z - ray.origin.z};
+    float t = determinant(matrixT) / detA;
+    if(t <= 0 || t > 99999)
+    {
+        return false;
+    }
+    // all conditions satisfied, it does intersect.
+    return true;
+}
+float determinant(float m [3][3])
+{
+    float firstTerm =  m[0][0] * (m[1][1] * m[2][2] - m[1][2]* m[2][1]);
+    float secondTerm = m[1][0] * (m[0][2] * m[2][1] - m[0][1]* m[2][2]);
+    float thirdTerm =  m[2][0] * (m[0][1] * m[1][2] - m[1][1]* m[0][2]);
+    return firstTerm + secondTerm + thirdTerm;
+}
 Vec3f computeColor(Ray r)
 {
 	int i;
@@ -95,6 +143,20 @@ Vec3f computeColor(Ray r)
 	{
 		t = intersectSphere(r,spheres[i]);
 		if (t<minT && t>=0)
+		{
+            // Material mat = scene.materials[spheres[i].material_id - 1];
+            Vec3f tempColor = {1,0,0};
+			c = tempColor;// can be replaced with any material property
+			minI = i;
+			minT = t;
+		}
+	}
+
+    // triangle intersections
+    vector<Triangle> triangles = scene.triangles;
+    for (i = 0; i < triangles.size(); i++)
+	{
+		if (intersectTriangle(r, triangles[i]))
 		{
             // Material mat = scene.materials[spheres[i].material_id - 1];
             Vec3f tempColor = {1,0,0};
