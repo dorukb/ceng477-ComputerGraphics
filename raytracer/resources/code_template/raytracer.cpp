@@ -4,6 +4,8 @@
 #include "helper.h"
 #include <math.h>
 
+#define INF 999999.0
+
 typedef unsigned char RGB[3];
 
 using namespace parser;
@@ -13,9 +15,37 @@ Ray generateRay(int i, int j, Camera cam);
 float intersectSphere(Ray r, Sphere s);
 Vec3f computeColor(Ray r);
 float determinant(float m [3][3]);
-bool intersectTriangle(Ray ray, Triangle tri);
+float intersectTriangle(Ray ray, Triangle tri);
 
 parser::Scene scene;
+int t_min;
+
+//L_a = k_a * l_a
+Vec3f L_a(Scene scene,int i){
+    return multVector(scene.materials[i].ambient,scene.ambient_light);
+}
+//L_d  = k_d * cos(the)' * E_i
+//cos(the)' = max (0,w_i.n)
+Vec3f L_d(Scene scene,int i,Vec3f w_i,Vec3f n,Vec3f E_i){
+    Vec3f result;
+    float cos_theta = max(0.0,dotProduct(w_i,n));
+    Vec3f k_d = scene.materials[i].diffuse;
+    result = multVector(multScaler(k_d,cos_theta),E_i);
+    return result;
+}
+//L_s =k_s * cos(alp)' ^p * E_i
+//cos(alp)' = max (0,n.h)
+//vec3f h = unitVector(add(w_i, w_o));
+Vec3f L_s(Scene scene,int i,Vec3f h,Vec3f n,Vec3f E_i){
+    Vec3f result;
+    Vec3f k_s = scene.materials[i].specular;
+    float cos_alpha = max(0.0, dotProduct(n, h));
+    float p = scene.materials[i].phong_exponent;
+    double exp = pow(cos_alpha,p);
+    result = multVector(multScaler(k_s,exp),E_i);
+    return result;
+}
+
 
 
 int main(int argc, char* argv[])
@@ -23,44 +53,159 @@ int main(int argc, char* argv[])
     // Sample usage for reading an XML scene file
     // parser::Scene scene;
     scene.loadFromXml(argv[1]);
+    vector<Camera> cameras = scene.cameras;
+    int camSize = cameras.size();
+    int triangelsSize = scene.triangles.size();
+    int meshesSize = scene.meshes.size();
+    int spheresSize = scene.spheres.size();
+    int lightSize = scene.point_lights.size();
+    int depth = scene.max_recursion_depth;
+    Vec3i backround = scene.background_color;
+    
+     
 
-//compute eye rays
-//ray objesi olucak
-//intersection yaz
-///color func
-//delta fonk
-//trişange intersection algo bak
-//shade
-//mirror
     
     // for each camera do
     //  for each pixel in image plane, do:
     //      compute viewing (eye, primary) rays
     //      find the first object hit by ray and its surface normal n
     //      set pixel color to value computed from hit point, light, and n
-
-
+    
     // ·NearPlane attribute defines the coordinates of the image plane with Left, Right, Bottom,
     // Top floating point parameters, respectively.
     // ·NearDistance defines the distance of the image plane to the camera.
-    vector<Camera> cameras = scene.cameras;
-
+    
+    
     // Debug
-    Vec3f sCent = scene.vertex_data[scene.spheres[0].center_vertex_id - 1];
+   // Vec3f sCent = scene.vertex_data[scene.spheres[0].center_vertex_id - 1];
     // cout << "sphere center: " << sCent.x << " " << sCent.y << " " << sCent.z << endl;
-
-    for(int camIndex = 0; camIndex < cameras.size(); camIndex++)
+   
+    for(int camIndex = 0; camIndex < camSize; camIndex++)
     {
         Camera currCam = cameras[camIndex];
-        unsigned char* image = new unsigned char [currCam.image_width * currCam.image_height * 3];
+        int imageWidth = cameras[camIndex].image_height;
+        int imageHeight = cameras[camIndex].image_width;
+        
+        
+        unsigned char* image = new unsigned char [imageWidth * imageHeight * 3];
+        
 
-     
-        for(int j = 0; j < currCam.image_height; j++)
+     //image produces
+        for(int j = 0; j < imageHeight; j++)
         {
-            for(int i = 0; i < currCam.image_width; i++)
+            for(int i = 0; i < imageWidth; i++)
             {
-                Ray ray = generateRay(i, j, currCam); 
-
+                //RAY TRACING
+                //compute viewving ray from e to s
+                Ray ray = generateRay(i, j, currCam);
+                int closest_S_T_M[3]={-1,-1,-1};// [sphere_index,triange_index,mesh_index]
+                Vec3f x;
+                t_min = INF;
+                double t ;
+                Vec3f shade ;
+                /*
+                
+            //for sphere
+                //for each object o:
+                for(int o=0;o<spheresSize;o++){
+                    //if ray intersects o at point x:
+                    t = intersectSphere(ray,scene.spheres[o]);
+                    // if t<tmin:
+                    //  tmin= t,obj = o;
+                    if(t>=0){
+                        if(t<t_min){
+                            t_min = t;
+                            closest_S_T_M[0]=o;
+                            closest_S_T_M[1]=-1;
+                            closest_S_T_M[2]=-1;
+                            //calculate intersection point x;
+                            x =  add(ray.origin ,multScaler(ray.dir,t_min));
+                        }
+                    }
+                    
+                    // if t<tmin:
+                    //  tmin= t,obj = o;
+                    
+                }
+            // for triange
+                for(int o=0;o<triangelsSize;o++){
+                    //if ray intersects o at point x:
+                    //t = intersectTriangle(ray,scene.spheres[o]);
+                    // if t<tmin:
+                    //  tmin= t,obj = o;
+                    if(t>=0){
+                        if(t<t_min){
+                            t_min = t;
+                            closest_S_T_M[0]=-1;
+                            closest_S_T_M[1]=o;
+                            closest_S_T_M[2]=-1;
+                            //calculate intersection point x;
+                            x =  add(ray.origin ,multScaler(ray.dir,t_min));
+                        }
+                    }
+                    // if t<tmin:
+                    //  tmin= t,obj = o;
+                    
+                }
+                
+            // for meshes
+                for(int o=0;o<meshesSize;o++){
+                    //if ray intersects o at point x:
+                   // t = intersectMesh(ray,scene.spheres[o]);
+                    // if t<tmin:
+                    //  tmin= t,obj = o;
+                    if(t>=0){
+                        if(t<t_min){
+                            t_min = t;
+                            closest_S_T_M[0]=-1;
+                            closest_S_T_M[1]=-1;
+                            closest_S_T_M[2]=o;
+                            //calculate intersection point x;
+                            x = add(ray.origin ,multScaler(ray.dir,t_min));
+                        }
+                    }
+                    
+                        
+                   
+                    
+                }
+                Vec3f pixel_color ;
+                //if object is not null:
+                if(triangelsSize > 0 || spheresSize > 0 || meshesSize > 0 ){
+                    //  pixel color = La ->ambiant shading is not effected by shadosw
+                    if( closest_S_T_M[0] != -1){//closest is a sphere
+                        pixel_color = L_a(scene,scene.spheres[closest_S_T_M[0]].material_id);
+                        //  for easch light l:
+                        for(int l=0;l<lightSize;l++){
+                            
+                        }
+                        
+                    }
+                   
+                    
+                    
+                    //      compute shadow ray s from x to l:
+                    //      for each object p:
+                    //          if s intersects p before the light source:
+                    //              continue the light loop
+                    //      pixel color = pixel color + Ld +Ls ->diffuse and specular components
+                }
+                
+            
+                
+                else{
+                    //  pixel color = color of backround
+                }
+                
+                
+              */
+                
+                
+                // do not forget clamping the pixel value to [0,255] range and rounding it to the nearest integer
+                
+                
+               // Vec3f shaded_pixel =
+                
                 // std::cout << "Ray dir: "<< ray.dir.x << ray.dir.y << ray.dir.z << " o: " << ray.origin.x << ray.origin.y << ray.origin.z << std::endl;
                 Vec3f rayColor = computeColor(ray);
                 if(rayColor.x > 0.01 || rayColor.y > 0.01|| rayColor.z > 0.01){
@@ -70,19 +215,60 @@ int main(int argc, char* argv[])
                 image[imgIndex] = (unsigned char)(rayColor.x*255);
                 image[imgIndex + 1] = (unsigned char)(rayColor.y*255);
                 image[imgIndex + 2]= (unsigned char)(rayColor.z*255);
-			
-            }            
+            
+            }
         }
-        write_ppm(currCam.image_name.c_str(), image, currCam.image_width, currCam.image_height);
+        write_ppm(currCam.image_name.c_str(), image, imageWidth, imageHeight);
 
     }
 
+    
+
+
+
+
+    
+
+    
+    
 
 
 }
 
+float intersectFace(Ray ray, Face face)
+{
+    Vec3f a = scene.vertex_data[face.v0_id - 1];
+    Vec3f b = scene.vertex_data[face.v1_id - 1];
+    Vec3f c = scene.vertex_data[face.v2_id - 1];
 
-bool intersectTriangle(Ray ray, Triangle tri)
+    float matrixA [3][3] = {a.x - b.x, a.x - c.x, ray.dir.x,
+                            a.y - b.y, a.y - c.y, ray.dir.y,
+                            a.z - b.z, a.z - c.z, ray.dir.z};
+    float detA = determinant(matrixA);
+    if(detA == 0) return -1;
+
+    // Cramers Rule
+    float matrixBeta [3][3] = {a.x - ray.origin.x, a.x - c.x, ray.dir.x,
+                               a.y - ray.origin.y, a.y - c.y, ray.dir.y,
+                               a.z - ray.origin.z, a.z - c.z, ray.dir.z};
+    float beta = determinant(matrixBeta) / detA;                      
+    if(beta < 0) return -1;
+
+    float matrixGama [3][3] = {a.x - b.x, a.x - ray.origin.x, ray.dir.x,
+                               a.y - b.y, a.y - ray.origin.y, ray.dir.y,
+                               a.z - b.z, a.z - ray.origin.z, ray.dir.z};
+    float gama = determinant(matrixGama) / detA;
+    if(gama < 0 || gama + beta > 1) return -1;
+
+    float matrixT[3][3] = {a.x - b.x, a.x - c.x, a.x - ray.origin.x,
+                           a.y - b.y, a.y - c.y, a.y - ray.origin.y,
+                           a.z - b.z, a.z - c.z, a.z - ray.origin.z};
+    float t = determinant(matrixT) / detA;
+    return t;  
+}
+
+
+float intersectTriangle(Ray ray, Triangle tri)
 {
     Vec3f a = scene.vertex_data[tri.indices.v0_id - 1];
     Vec3f b = scene.vertex_data[tri.indices.v1_id - 1];
@@ -92,31 +278,26 @@ bool intersectTriangle(Ray ray, Triangle tri)
                             a.y - b.y, a.y - c.y, ray.dir.y,
                             a.z - b.z, a.z - c.z, ray.dir.z};
     float detA = determinant(matrixA);
-    if(detA == 0) return false;
+    if(detA == 0) return -1;
 
     // Cramers Rule
     float matrixBeta [3][3] = {a.x - ray.origin.x, a.x - c.x, ray.dir.x,
                                a.y - ray.origin.y, a.y - c.y, ray.dir.y,
                                a.z - ray.origin.z, a.z - c.z, ray.dir.z};
     float beta = determinant(matrixBeta) / detA;                      
-    if(beta < 0) return false;
+    if(beta < 0) return -1;
 
     float matrixGama [3][3] = {a.x - b.x, a.x - ray.origin.x, ray.dir.x,
                                a.y - b.y, a.y - ray.origin.y, ray.dir.y,
                                a.z - b.z, a.z - ray.origin.z, ray.dir.z};
     float gama = determinant(matrixGama) / detA;
-    if(gama < 0 || gama + beta > 1) return false;
+    if(gama < 0 || gama + beta > 1) return -1;
 
     float matrixT[3][3] = {a.x - b.x, a.x - c.x, a.x - ray.origin.x,
                            a.y - b.y, a.y - c.y, a.y - ray.origin.y,
                            a.z - b.z, a.z - c.z, a.z - ray.origin.z};
     float t = determinant(matrixT) / detA;
-    if(t <= 0 || t > 99999)
-    {
-        return false;
-    }
-    // all conditions satisfied, it does intersect.
-    return true;
+    return t;  
 }
 float determinant(float m [3][3])
 {
@@ -153,10 +334,12 @@ Vec3f computeColor(Ray r)
 	}
 
     // triangle intersections
+
     vector<Triangle> triangles = scene.triangles;
     for (i = 0; i < triangles.size(); i++)
 	{
-		if (intersectTriangle(r, triangles[i]))
+        t = intersectTriangle(r, triangles[i]);
+		if (t > 0 && t<minT)
 		{
             // Material mat = scene.materials[spheres[i].material_id - 1];
             Vec3f tempColor = {1,0,0};
@@ -165,6 +348,25 @@ Vec3f computeColor(Ray r)
 			minT = t;
 		}
 	}
+    
+    
+    vector<Mesh> meshes = scene.meshes;
+    for(i = 0; i < meshes.size(); i++)
+    {
+        vector<Face> faces = meshes[i].faces;
+        for(int j = 0; j < faces.size(); j++)
+        {
+            t = intersectFace(r, faces[j]);
+            if (t > 0 && t<minT)
+            {
+                // Material mat = scene.materials[spheres[i].material_id - 1];
+                Vec3f tempColor = {1,0,0};
+                c = tempColor;// can be replaced with any material property
+                minI = i;
+                minT = t;
+            }
+        }
+    }
 	// if (minI!=-1)
 	// {
 	// 	P = add(r.o,multS(r.d,minT));
@@ -189,9 +391,7 @@ float intersectSphere(Ray r, Sphere s)
 	A = r.dir.x*r.dir.x+r.dir.y*r.dir.y+r.dir.z*r.dir.z;
 	delta = B*B-4*A*C;
 	
-	if (delta<0){
-        return -1;
-    } 
+	if (delta<0) return -1;
 	else if (delta==0)
 	{
 		t = -B / (2*A);
@@ -246,3 +446,14 @@ Ray generateRay(int i, int j, Camera cam)
 	return result;
 }
 
+
+
+
+//compute eye rays
+//ray objesi olucak
+//intersection yaz
+///color func
+//delta fonk
+//trişange intersection algo bak
+//shade
+//mirror

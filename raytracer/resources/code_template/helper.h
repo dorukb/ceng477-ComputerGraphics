@@ -12,7 +12,13 @@ struct Ray
 {
 	Vec3f origin, dir;
 };
+Vec3f substract(const Vec3f &a,const Vec3f &b);
 
+Vec3f multVector(const Vec3f &a,const Vec3f &b);
+
+double dotProduct(const Vec3f &a, Vec3f &b);
+double length(Vec3f a);
+Vec3f unitVector(Vec3f a);
 #endif // __helper_h__
 //compute eye rays
 //ray objesi olucak
