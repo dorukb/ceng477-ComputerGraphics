@@ -1,7 +1,10 @@
 #include "helper.h"
+#include "ppm.h"
 #include <math.h>
+#include <iostream>
 
 using namespace parser;
+
 
 Vec3f multScaler(const Vec3f &a,float s)
 {
@@ -69,3 +72,12 @@ Vec3f unitVector(Vec3f a)
     result.z = a.z/l;
     return result;
 }
+
+float determinant(float m [3][3])
+{
+    float firstTerm =  m[0][0] * (m[1][1] * m[2][2] - m[1][2]* m[2][1]);
+    float secondTerm = m[1][0] * (m[0][2] * m[2][1] - m[0][1]* m[2][2]);
+    float thirdTerm =  m[2][0] * (m[0][1] * m[1][2] - m[1][1]* m[0][2]);
+    return firstTerm + secondTerm + thirdTerm;
+}
+
