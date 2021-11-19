@@ -50,13 +50,13 @@ Vec3f multVector(const Vec3f &a,const Vec3f &b){
 
     return result;
 }
-double dotProduct(const Vec3f &a, Vec3f &b)
+float dotProduct(const Vec3f &a, Vec3f &b)
 {
     double result = a.x*b.x + a.y*b.y + a.z*b.z;
     return result;
 }
 
-double length(Vec3f a)
+float length(Vec3f a)
 {
     return sqrt((a.x*a.x)+(a.y*a.y)+(a.z*a.z));
 }
@@ -64,7 +64,7 @@ double length(Vec3f a)
 Vec3f makeUnitVector(Vec3f a)
 {
     Vec3f result;
-    double l;
+    float l;
     l = length(a);
     result.x = a.x/l;
     result.y = a.y/l;
@@ -80,9 +80,9 @@ float determinant(float m [3][3])
     return firstTerm + secondTerm + thirdTerm;
 }
 
-Vec3f clamp(Vec3f colors)
+Vec3i clamp(Vec3f colors)
 {
-    Vec3f result;
+    Vec3i result;
     if(colors.x > 255){ 
         result.x = 255;
          }
@@ -90,7 +90,9 @@ Vec3f clamp(Vec3f colors)
         result.x = 0;
          }
     else {
-         result.x = (int) round(colors.x);
+        //  result.x = (int) round(colors.x);
+         result.x = (int) (colors.x + 0.5);
+
           }
     if(colors.y > 255){ 
         result.y = 255;
@@ -99,7 +101,9 @@ Vec3f clamp(Vec3f colors)
         result.y = 0; 
         }
     else { 
-        result.y = (int) round(colors.y);
+        // result.y = (int) round(colors.y);
+        result.y = (int) (colors.y + 0.5);
+
          }
     if(colors.z > 255){ 
         result.z = 255; 
@@ -108,7 +112,8 @@ Vec3f clamp(Vec3f colors)
         result.z = 0;
          }
     else { 
-        result.z = (int) round(colors.z); 
+        // result.z = (int) round(colors.z); 
+        result.z = (int) (colors.z + 0.5);
         }
     return result;
 }

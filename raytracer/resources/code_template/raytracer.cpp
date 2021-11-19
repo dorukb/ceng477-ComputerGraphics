@@ -11,7 +11,6 @@ using namespace parser;
 using namespace std;
 
 parser::Scene scene;
-int t_min;
 Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos);
 Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos);
 Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos);
@@ -174,10 +173,9 @@ Vec3f L_a(Material mat)
 //cos(the)' = max (0,w_i.n)
 Vec3f L_d(Material mat, Vec3f w_i, Vec3f n, Vec3f E_i)
 {
-    Vec3f result;
-    float cos_theta = max((double)0, dotProduct(w_i, n));
+    float cos_theta = max(0.0f, dotProduct(w_i, n));
     Vec3f k_d = mat.diffuse;
-    result = multVector(multScaler(k_d, cos_theta), E_i);
+    Vec3f result = multVector(multScaler(k_d, cos_theta), E_i);
     return result;
 }
 //L_s =k_s * cos(alp)' ^p * E_i
@@ -187,17 +185,16 @@ Vec3f L_s(Material mat, Vec3f h, Vec3f n, Vec3f E_i)
 {
     Vec3f result;
     Vec3f k_s = mat.specular;
-    float cos_alpha = max(0.0, dotProduct(n, h));
+    float cos_alpha = max(0.0f, dotProduct(n, h));
     float p = mat.phong_exponent;
-    double exp = pow(cos_alpha, p);
+    float exp = pow(cos_alpha, p);
     result = multVector(multScaler(k_s, exp), E_i);
     return result;
 }
 //E_i = I/(d^2)
-Vec3f E_i(Vec3f I, double d)
+Vec3f E_i(Vec3f I, float d)
 {
-    d = 1 / (d * d);
-    return multScaler(I, d);
+    return multScaler(I,  1.0 / (d * d));
 }
 
 //L_m = k_m * L_i(x,w_r)
@@ -223,6 +220,8 @@ int main(int argc, char *argv[])
     // Top floating point parameters, respectively.
     // ·NearDistance defines the distance of the image plane to the camera.
 
+    vector<Vec3f> triNormals;
+
     for (int camIndex = 0; camIndex < numOfCams; camIndex++)
     {
         Camera currCam = cameras[camIndex];
@@ -231,6 +230,7 @@ int main(int argc, char *argv[])
 
         unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
 
+        float t_min;
         // Iterate over the image plane
         for (int j = 0; j < imageHeight; j++)
         {
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
                 for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                 {
                     t = intersectSphere(ray, scene.spheres[sphereIndex]);
-                    if (t >= 0 && t < t_min)
+                    if (t > 0 && t < t_min)
                     {
                         t_min = t;
                         closestObjIndex = sphereIndex;
@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
                     for (int j = 0; j < faces.size(); j++)
                     {
                         t = intersectFace(ray, faces[j]);
-                        if (t >= 0 && t < t_min)
+                        if (t > 0 && t < t_min)
                         {
                             t_min = t;
                             closestObjIndex = meshIndex;
@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
                 //      pixel color = pixel color + Ld +Ls ->diffuse and specular components
 
                 // do not forget clamping the pixel value to [0,255] range and rounding it to the nearest integer
-                Vec3f rayColor = clamp(shadedColor);
+                Vec3i rayColor = clamp(shadedColor);
 
                 int imgIndex = 3 * (i + j * currCam.image_width);
                 image[imgIndex] = (unsigned char)(rayColor.x);
@@ -332,11 +332,11 @@ int main(int argc, char *argv[])
     }
 }
 
-
 Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
 {
     Sphere curr_sphere = scene.spheres[objIndex];
     Material mat = scene.materials[curr_sphere.material_id -1];
+
     Vec3f pixel_color = L_a(mat);
 
     //  Shading
@@ -359,11 +359,9 @@ Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
         Vec3f E = E_i(I, length(w_i));
         Vec3f center = scene.vertex_data[curr_sphere.center_vertex_id - 1];
         Vec3f n = intersectionPoint - center;
+        n = multScaler(n, 1.0 / curr_sphere.radius);
 
-        // n = multScaler(n, 1 / curr_sphere.radius);
-        // n = multScaler(n, 1 / length(n));
-
-        Vec3f L_dif = L_d(mat, makeUnitVector(w_i), makeUnitVector(n), E);
+        Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
         pixel_color = pixel_color + L_dif;
 
         // foreach object p:
@@ -379,32 +377,28 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
     Material mat = scene.materials[currTri.material_id -1];
 
     Vec3f pixel_color = L_a(mat);
-    pixel_color = {1,0,0};
-    printf("HELLOOO");
 
     int numOfLights = scene.point_lights.size();
     for (int l = 0; l < numOfLights; l++)
     {
-        pixel_color = {1,0,0};
         //compute shadow rays from x to l;
-        /*  
-        w_i = substract(x, scene.point_lights[l].position);
-        w_o = substract(x, currCam.position);
-        I = scene.point_lights[l].intensity;
-        E = E_i(I, length(w_i));
-        Triangle curr_triangle = scene.triangles[closest_S_T_M[1]];
+        
+        Vec3f w_i = scene.point_lights[l].position - intersectionPoint;
+        Vec3f w_o = camPos - intersectionPoint;
+
+        Vec3f I = scene.point_lights[l].intensity;
+        Vec3f E = E_i(I, length(w_i));
+        Triangle curr_triangle = scene.triangles[objIndex];
         Vec3f a_vertex = scene.vertex_data[curr_triangle.indices.v0_id];
         Vec3f b_vertex = scene.vertex_data[curr_triangle.indices.v1_id];
         Vec3f c_vertex = scene.vertex_data[curr_triangle.indices.v2_id];
-        Vec3f ab_edge = substract(a_vertex,b_vertex);
-        Vec3f ac_edge = substract(a_vertex,c_vertex);
+        Vec3f ab_edge = b_vertex - a_vertex;
+        Vec3f ac_edge = c_vertex - a_vertex;
         Vec3f n = cross(ab_edge,ac_edge);
         n = multScaler(n,1/length(n));
 
-        Vec3f L_dif = L_d(scene, curr_triangle.material_id - 1,unitVector(w_i), n, E);
-        pixel_color = add(pixel_color,L_dif);
-        pixel_color = L_dif;
-        */
+        Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
+        pixel_color = pixel_color + L_dif;
     }
     return pixel_color;
 }
