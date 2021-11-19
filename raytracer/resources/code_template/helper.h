@@ -16,11 +16,11 @@ Vec3f cross(const Vec3f &first, const Vec3f &second);
 
 double dotProduct(const Vec3f &a, Vec3f &b);
 double length(Vec3f a);
-Vec3f unitVector(Vec3f a);
+Vec3f makeUnitVector(Vec3f a);
 float determinant(float m [3][3]);
 Vec3f operator+(const parser::Vec3f& v1, const parser::Vec3f& v2);
 Vec3f operator-(const parser::Vec3f& v1, const parser::Vec3f& v2);
-
+Vec3f clamp(Vec3f colors);
 
 // Vec3f operator*(const parser::Vec3f& v1, float alpha){
 //     Vec3f result;

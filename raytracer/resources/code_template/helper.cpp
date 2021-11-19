@@ -61,7 +61,7 @@ double length(Vec3f a)
     return sqrt((a.x*a.x)+(a.y*a.y)+(a.z*a.z));
 }
 
-Vec3f unitVector(Vec3f a)
+Vec3f makeUnitVector(Vec3f a)
 {
     Vec3f result;
     double l;
@@ -80,3 +80,35 @@ float determinant(float m [3][3])
     return firstTerm + secondTerm + thirdTerm;
 }
 
+Vec3f clamp(Vec3f colors)
+{
+    Vec3f result;
+    if(colors.x > 255){ 
+        result.x = 255;
+         }
+    else if(colors.x < 0) { 
+        result.x = 0;
+         }
+    else {
+         result.x = (int) round(colors.x);
+          }
+    if(colors.y > 255){ 
+        result.y = 255;
+         }
+    else if(colors.y < 0) { 
+        result.y = 0; 
+        }
+    else { 
+        result.y = (int) round(colors.y);
+         }
+    if(colors.z > 255){ 
+        result.z = 255; 
+        }
+    else if(colors.z < 0) { 
+        result.z = 0;
+         }
+    else { 
+        result.z = (int) round(colors.z); 
+        }
+    return result;
+}
