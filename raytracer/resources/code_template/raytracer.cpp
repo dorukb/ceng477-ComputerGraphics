@@ -226,8 +226,8 @@ int main(int argc, char *argv[])
     for (int camIndex = 0; camIndex < numOfCams; camIndex++)
     {
         Camera currCam = cameras[camIndex];
-        int imageWidth = currCam.image_height;
-        int imageHeight = currCam.image_width;
+        int imageWidth = currCam.image_width;
+        int imageHeight = currCam.image_height;
 
         unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
 
