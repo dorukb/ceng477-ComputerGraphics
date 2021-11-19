@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
         {
             for (int i = 0; i < imageWidth; i++)
             {
-                //RAY TRACING
+            //RAY TRACING
                 //compute viewving ray from e to s
                 Ray ray = generateRay(i, j, currCam);
                 int closest_S_T_M[3] = {-1, -1, -1}; // [sphere_index,triange_index,mesh_index]
@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
                 }
 
                 //////////////////buraya kadar C ye color atayıp verebilyoruz şimdi color belirle/////
-
+                // SHADING
                 //if object is not null:
                 if (triangelsSize > 0 || spheresSize > 0 || meshesSize > 0)
                 {
@@ -420,7 +420,7 @@ int main(int argc, char *argv[])
                     if (closest_S_T_M[0] != -1)
                     { //closest is a sphere
                         Sphere curr_sphere = scene.spheres[closest_S_T_M[0]];
-                        //pixel_color = L_a(scene, curr_sphere.material_id - 1);
+                        pixel_color = L_a(scene, curr_sphere.material_id - 1);
 
                         //  for easch light l:
                         for (int l = 0; l < lightSize; l++)
@@ -435,7 +435,6 @@ int main(int argc, char *argv[])
                             n = multScaler(n, 1 / curr_sphere.radius);
                             Vec3f L_dif = L_d(scene, curr_sphere.material_id - 1,unitVector(w_i), n, E);
                             pixel_color = add(pixel_color,L_dif);
-                            pixel_color = L_dif;
 
                             // foreach object p:
                             //     if s intersects p before the light source:
@@ -446,22 +445,31 @@ int main(int argc, char *argv[])
                     else if (closest_S_T_M[1] != -1)
                     { //closest is a triangle
                         pixel_color = L_a(scene, scene.triangles[closest_S_T_M[1]].material_id - 1);
+                        pixel_color = {1,0,0};
+                        printf("HELLOOO");
                         for (int l = 0; l < lightSize; l++)
                         {
+                            pixel_color = {1,0,0};
                             //compute shadow rays from x to l;
-                            /*
+                          /*  
                             w_i = substract(x, scene.point_lights[l].position);
                             w_o = substract(x, currCam.position);
                             I = scene.point_lights[l].intensity;
                             E = E_i(I, length(w_i));
-                            int first_edge_vertex_id = scene.triangles[closest_S_T_M[1]].indices.v0_id;
+                            Triangle curr_triangle = scene.triangles[closest_S_T_M[1]];
+                            Vec3f a_vertex = scene.vertex_data[curr_triangle.indices.v0_id];
+                            Vec3f b_vertex = scene.vertex_data[curr_triangle.indices.v1_id];
+                            Vec3f c_vertex = scene.vertex_data[curr_triangle.indices.v2_id];
+                            Vec3f ab_edge = substract(a_vertex,b_vertex);
+                            Vec3f ac_edge = substract(a_vertex,c_vertex);
+                            Vec3f n = cross(ab_edge,ac_edge);
+                            n = multScaler(n,1/length(n));
 
-                            n = substract(center, x);
-                            n = multScaler(n, 1 / curr_sphere.radius);
-                            Vec3f L_dif = L_d(scene, curr_sphere.material_id - 1,unitVector(w_i), n, E);
+                            Vec3f L_dif = L_d(scene, curr_triangle.material_id - 1,unitVector(w_i), n, E);
                             pixel_color = add(pixel_color,L_dif);
                             pixel_color = L_dif;
-                            */
+*/
+                            
                             // foreach object p:
                             //     if s intersects p before the light source:
                             //     continue the light loop; // point is in shadow – no contribution from this light
