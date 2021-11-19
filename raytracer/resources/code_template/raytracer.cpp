@@ -343,14 +343,6 @@ Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
     Material mat = scene.materials[curr_sphere.material_id -1];
     Vec3f pixel_color = L_a(mat);
 
-    //  Shading
-    //calculate intersection point x
-    //     P = add(r.o,multS(r.d,minT));  -- p = x
-    //     L = add(light,multS(P,-1));   -- w_i
-    //     N = add(P,multS(spheres[minI].center,-1));  -- n
-
-    //     L = normalize(L);  N = normalize(N);
-    //     c = multS(c,dot(L,N));
     int numOfLights = scene.point_lights.size();
     for (int i = 0; i < numOfLights; i++)
     {
@@ -375,9 +367,7 @@ Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
             Vec3f L_spe = L_s(mat, h, n, E);
             pixel_color = pixel_color + L_spe;
         }
-        
-
-        
+    
         // foreach object p:
         //     if s intersects p before the light source:
         //     continue the light loop; // point is in shadow – no contribution from this light
@@ -402,16 +392,15 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos)
 
         Vec3f I = scene.point_lights[l].intensity;
         Vec3f E = E_i(I, length(w_i));
-        Triangle curr_triangle = scene.triangles[objIndex];
-        Vec3f a_vertex = scene.vertex_data[curr_triangle.indices.v0_id];
-        Vec3f b_vertex = scene.vertex_data[curr_triangle.indices.v1_id];
-        Vec3f c_vertex = scene.vertex_data[curr_triangle.indices.v2_id];
+        Vec3f a_vertex = scene.vertex_data[currTri.indices.v0_id-1];
+        Vec3f b_vertex = scene.vertex_data[currTri.indices.v1_id-1];
+        Vec3f c_vertex = scene.vertex_data[currTri.indices.v2_id-1];
         Vec3f ab_edge = b_vertex - a_vertex;
         Vec3f ac_edge = c_vertex - a_vertex;
         Vec3f n = cross(ab_edge,ac_edge);
-        n = multScaler(n,1/length(n));
+        // n = multScaler(n,1/length(n));
 
-        Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
+        Vec3f L_dif = L_d(mat, makeUnitVector(w_i), makeUnitVector(n), E);
         pixel_color = pixel_color + L_dif;
     }
     return pixel_color;
@@ -421,6 +410,7 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTria
     Mesh currMesh = scene.meshes[objIndex];
     Material mat = scene.materials[currMesh.material_id - 1];
     Face face = currMesh.faces[meshTriangleIndex];
+
     Vec3f pixel_color = L_a(mat);
     int numOfLights = scene.point_lights.size();
     for (int l = 0; l < numOfLights; l++)
@@ -432,14 +422,14 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTria
 
         Vec3f I = scene.point_lights[l].intensity;
         Vec3f E = E_i(I, length(w_i));
-        Vec3f a_vertex = scene.vertex_data[face.v0_id];
-        Vec3f b_vertex = scene.vertex_data[face.v1_id];
-        Vec3f c_vertex = scene.vertex_data[face.v2_id];
+        Vec3f a_vertex = scene.vertex_data[face.v0_id -1];
+        Vec3f b_vertex = scene.vertex_data[face.v1_id -1];
+        Vec3f c_vertex = scene.vertex_data[face.v2_id -1];
         Vec3f ab_edge = b_vertex - a_vertex;
         Vec3f ac_edge = c_vertex - a_vertex;
 
-        Vec3f n = cross(makeUnitVector(ab_edge),makeUnitVector(ac_edge));
-        n = multScaler(n,1/length(n));
+        Vec3f n = cross(ab_edge, ac_edge);
+        n = multScaler(n,1.0 / length(n));
 
         Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
         pixel_color = pixel_color + L_dif;
