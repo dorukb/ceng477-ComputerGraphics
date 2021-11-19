@@ -15,15 +15,6 @@ Vec3f multScaler(const Vec3f &a,float s)
 	return result;
 }
 
-Vec3f add(const Vec3f &a, const Vec3f &b)
-{
-	Vec3f result;
-	result.x = a.x+b.x;
-	result.y = a.y+b.y;
-	result.z = a.z+b.z;
-	return result;
-}
-
 Vec3f cross(const Vec3f &first, const Vec3f &second){
     Vec3f result;
     result.x = first.y * second.z - first.z * second.y;
@@ -32,16 +23,24 @@ Vec3f cross(const Vec3f &first, const Vec3f &second){
     return result;
 }
 
-Vec3f substract(const Vec3f &a,const Vec3f &b){
 
+Vec3f operator+(const parser::Vec3f& v1, const parser::Vec3f& v2){
     Vec3f result;
-    result.x = b.x - a.x;
-    result.y = b.y - a.y;
-    result.z = b.z - a.z;
+    result.x = v1.x + v2.x;
+    result.y = v1.y + v2.y;
+    result.z = v1.z + v2.z;
 
     return result;
 }
 
+Vec3f operator-(const parser::Vec3f& v1, const parser::Vec3f& v2){
+    Vec3f result;
+    result.x = v1.x - v2.x;
+    result.y = v1.y - v2.y;
+    result.z = v1.z - v2.z;
+
+    return result;
+}
 Vec3f multVector(const Vec3f &a,const Vec3f &b){
 
     Vec3f result;
