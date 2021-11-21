@@ -11,11 +11,19 @@ using namespace parser;
 using namespace std;
 
 parser::Scene scene;
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos);
-Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight, Vec3f pixel_color);
-Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight, Vec3f pixel_color);
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight, Vec3f pixel_color);
+
+Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
+Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam);
+Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
 bool doesIntersectWithMesh(Ray ray, float tLight);
+Vec3f colorOfPixel(Ray ray, int recursionDepth,Camera currCam);
+int numOfSpheres;
+int numOfTriangles;
+int numOfMeshes;
+int numOfLights;
+int numOfCams ;
+Vec3i bgColor;
+vector<Vec3f> triNormals;
 
 Ray generateRay(int i, int j, Camera cam)
 {
@@ -187,11 +195,37 @@ Vec3f L_s(Material mat, Vec3f h, Vec3f n, Vec3f E_i)
 {
     Vec3f result;
     Vec3f k_s = mat.specular;
-    float cos_alpha = max(0.0f, dotProduct(n, h));
+    double cos_alpha = max(0.0f, dotProduct(n, h));
     float p = mat.phong_exponent;
     float exp = pow(cos_alpha, p);
     result = multVector(multScaler(k_s, exp), E_i);
     return result;
+}
+
+//L_m = k_m * L_i(x,w_r)
+// eğer k_m mirror 0 sa her yerden 0 l_m olcak
+    // değilse recursive 
+    // yansıyan vektor m olsun m =e+dt e intersection point d de gittiği yön yani w_r yönü olucak
+Vec3f L_m(Material mat,Vec3f w_o,Vec3f n,int depth,Vec3f intersection,Camera currCam)
+{
+    Vec3f result;
+    Vec3f k_m = mat.mirror;
+    if ((k_m.x <= 0.0001 && k_m.y <= 0.0001 && k_m.z <= 0.0001)|| depth == 0){
+        return {0,0,0};
+    }
+    else {
+        //float cos_theta = max(0.0f, );
+        Vec3f w_r =  multScaler(multScaler(n,2),dotProduct(n, w_o))-w_o; 
+        w_r = makeUnitVector(w_r);
+        Ray reflection_ray ;
+        reflection_ray.origin = intersection + multScaler(n,scene.shadow_ray_epsilon);
+       // reflection_ray.origin = intersection;
+        reflection_ray.dir = w_r;
+        Vec3f L_i = colorOfPixel(reflection_ray, depth-1,currCam);
+        result = multVector(k_m,L_i);
+        return result;
+    }
+
 }
 //E_i = I/(d^2)
 Vec3f E_i(Vec3f I, float d)
@@ -199,53 +233,12 @@ Vec3f E_i(Vec3f I, float d)
     return multScaler(I,  1.0 / (d * d));
 }
 
-//L_m = k_m * L_i(x,w_r)
-Vec3f L_m()
-{
-    Vec3f result;
-    return result;
-}
-int main(int argc, char *argv[])
-{
-    scene.loadFromXml(argv[1]);
-    vector<Camera> cameras = scene.cameras;
-    int numOfCams = cameras.size();
-    int numOfTriangles = scene.triangles.size();
-    int numOfMeshes = scene.meshes.size();
-    int numOfSpheres = scene.spheres.size();
-    int recursionDepth = scene.max_recursion_depth;
-    int numOfLights = scene.point_lights.size();
-    Vec3i bgColor = scene.background_color;
+Vec3f colorOfPixel(Ray ray, int recursionDepth,Camera currCam){
 
-    // ·NearPlane attribute defines the coordinates of the image plane with Left, Right, Bottom,
-    // Top floating point parameters, respectively.
-    // ·NearDistance defines the distance of the image plane to the camera.
-
-    vector<Vec3f> triNormals;
-
-
-    for (int camIndex = 0; camIndex < numOfCams; camIndex++)
-    {
-        Camera currCam = cameras[camIndex];
-        int imageWidth = currCam.image_width;
-        int imageHeight = currCam.image_height;
-
-        unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
-
-        float t_min;
-        // Iterate over the image plane
-        for (int j = 0; j < imageHeight; j++)
-        {
-            for (int i = 0; i < imageWidth; i++)
-            {
-                //RAY TRACING
-                //compute viewing ray from e to s(i,j)
-                Ray ray = generateRay(i, j, currCam);
 
                 int closestObjIndex = -1;
                 ObjectType closestObjType = NONE;
-
-                t_min = INF;
+                float t_min = INF;
                 double t;
 
                 int meshTriangleIndex;
@@ -312,7 +305,7 @@ int main(int argc, char *argv[])
                             // Intersect with all spheres in the scene
                             for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                             {
-                                t = intersectSphere(ray, scene.spheres[sphereIndex]);
+                                t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
                                 if (t > 0 && t < tLight)
                                 {
                                     // found one obj that intersects before the light source. quit
@@ -325,7 +318,7 @@ int main(int argc, char *argv[])
                             // Intersect with all triangles in the scene
                             for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
                             {
-                                t = intersectTriangle(ray, scene.triangles[triIndex]);
+                                t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
                                 if (t > 0 && t < tLight)
                                 {
                                     // found one obj that intersects before the light source. quit
@@ -341,7 +334,7 @@ int main(int argc, char *argv[])
                                 continue;
                             }
 
-                            shadedColor = shadeSphere(closestObjIndex, intersectionPoint, currCam.position, currLight, shadedColor);
+                            shadedColor = shadedColor + shadeSphere(closestObjIndex, intersectionPoint, currCam.position, currLight, recursionDepth, currCam);
                         }
                         break;
 
@@ -389,7 +382,7 @@ int main(int argc, char *argv[])
                                 continue;
                             }
 
-                            shadedColor = shadeTriangle(closestObjIndex, intersectionPoint, currCam.position, currLight, shadedColor);
+                            shadedColor = shadedColor + shadeTriangle(closestObjIndex, intersectionPoint, currCam.position, currLight,recursionDepth,currCam);
                         }
                         break;
 
@@ -437,7 +430,7 @@ int main(int argc, char *argv[])
                                 continue;
                             }
 
-                            shadedColor = shadeMesh(closestObjIndex, intersectionPoint, currCam.position, meshTriangleIndex, currLight, shadedColor);
+                            shadedColor = shadedColor + shadeMesh(closestObjIndex, intersectionPoint, currCam.position, meshTriangleIndex, currLight,recursionDepth,currCam);
                         }
                         break;
 
@@ -452,7 +445,45 @@ int main(int argc, char *argv[])
                         cout << "ERROR -- Closest object type is not set." << endl;
                         break;
                 }
-                
+
+                return shadedColor;
+}
+
+int main(int argc, char *argv[])
+{
+    scene.loadFromXml(argv[1]);
+    vector<Camera> cameras = scene.cameras;
+    numOfCams = cameras.size();
+    numOfTriangles = scene.triangles.size();
+    numOfMeshes = scene.meshes.size();
+    numOfSpheres = scene.spheres.size();
+    int recursionDepth = scene.max_recursion_depth;
+    numOfLights = scene.point_lights.size();
+    bgColor = scene.background_color;
+
+    // ·NearPlane attribute defines the coordinates of the image plane with Left, Right, Bottom,
+    // Top floating point parameters, respectively.
+    // ·NearDistance defines the distance of the image plane to the camera.
+
+    for (int camIndex = 0; camIndex < numOfCams; camIndex++)
+    {
+        Camera currCam = cameras[camIndex];
+        int imageWidth = currCam.image_width;
+        int imageHeight = currCam.image_height;
+
+        unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
+
+        
+        // Iterate over the image plane
+        for (int j = 0; j < imageHeight; j++)
+        {
+            for (int i = 0; i < imageWidth; i++)
+            {
+                //RAY TRACING
+                //compute viewing ray from e to s(i,j)
+                Ray ray = generateRay(i, j, currCam);
+                Vec3f shadedColor = colorOfPixel(ray,recursionDepth, currCam);
+
                 //      compute shadow ray s from x to l:
                 //      for each object p:
                 //          if s intersects p before the light source:
@@ -460,6 +491,7 @@ int main(int argc, char *argv[])
                 //      pixel color = pixel color + Ld +Ls ->diffuse and specular components
 
                 // do not forget clamping the pixel value to [0,255] range and rounding it to the nearest integer
+                
                 Vec3i rayColor = clamp(shadedColor);
 
                 int imgIndex = 3 * (i + j * currCam.image_width);
@@ -491,7 +523,7 @@ bool doesIntersectWithMesh(Ray ray, float tLight)
     }
     return false;
 }
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight, Vec3f pixel_color)
+Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam)
 {
     Sphere curr_sphere = scene.spheres[objIndex];
     Material mat = scene.materials[curr_sphere.material_id -1];
@@ -505,24 +537,24 @@ Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLigh
     Vec3f center = scene.vertex_data[curr_sphere.center_vertex_id - 1];
     Vec3f n = intersectionPoint - center;
     n = multScaler(n, 1.0 / curr_sphere.radius);
-
-    Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
-    pixel_color = pixel_color + L_dif;
-
+    
+    Vec3f res = L_d(mat, makeUnitVector(w_i), n, E);    
+    
     float theta = acos(dotProduct(makeUnitVector(w_i),n) );
     if (theta<90) {
         Vec3f h = makeUnitVector(w_i+w_o);
-    
         Vec3f L_spe = L_s(mat, h, n, E);
-        pixel_color = pixel_color + L_spe;
+        res = res + L_spe;
     }
+    Vec3f L_mir = L_m(mat,makeUnitVector(w_o),n,depth,intersectionPoint, currCam);
+    res = res + L_mir;
     // foreach object p:
     //     if s intersects p before the light source:
     //     continue the light loop; // point is in shadow – no contribution from this light
     //     pixel color += Ld + Ls // add diffuse and specular components for this light source
-    return pixel_color;
+    return res;
 }
-Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight, Vec3f pixel_color)
+Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam)
 {
     Triangle currTri = scene.triangles[objIndex];
     Material mat = scene.materials[currTri.material_id -1];
@@ -542,12 +574,9 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLi
     Vec3f n = cross(ab_edge,ac_edge);
     // n = multScaler(n,1/length(n));
 
-    Vec3f L_dif = L_d(mat, makeUnitVector(w_i), makeUnitVector(n), E);
-    pixel_color = pixel_color + L_dif;
-
-    return pixel_color;
+    return L_d(mat, makeUnitVector(w_i), makeUnitVector(n), E);
 }
-Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight, Vec3f pixel_color)
+Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam )
 {
     Mesh currMesh = scene.meshes[objIndex];
     Material mat = scene.materials[currMesh.material_id - 1];
@@ -567,9 +596,5 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTria
     Vec3f n = cross(ab_edge, ac_edge);
     n = multScaler(n,1.0 / length(n));
 
-    Vec3f L_dif = L_d(mat, makeUnitVector(w_i), n, E);
-    pixel_color = pixel_color + L_dif;
-
-
-    return pixel_color;
+    return L_d(mat, makeUnitVector(w_i), n, E) + L_m(mat, makeUnitVector(w_o), n, depth, intersectionPoint, currCam);
 }
