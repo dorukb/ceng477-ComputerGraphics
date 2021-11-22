@@ -16,7 +16,7 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLi
 Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam);
 Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
 bool doesIntersectWithMesh(Ray ray, float tLight);
-Vec3f colorOfPixel(Ray ray, int recursionDepth,Camera currCam);
+Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam);
 int numOfSpheres;
 int numOfTriangles;
 int numOfMeshes;
@@ -73,7 +73,7 @@ float intersectFace(Ray ray, Face face)
                            a.y - b.y, a.y - c.y, ray.dir.y,
                            a.z - b.z, a.z - c.z, ray.dir.z};
     float detA = determinant(matrixA);
-    if (detA == 0)
+    if (fabs(detA) < 0)
         return -1;
 
     // Cramers Rule
@@ -134,38 +134,29 @@ float intersectTriangle(Ray ray, Triangle tri)
 }
 float intersectSphere(Ray r, Sphere s)
 {
-    Vec3f dir = r.dir ;
-    Vec3f ori = r.origin;
-    
-    float A, B, C; //constants for the quadratic equation
-    Vec3f c = scene.vertex_data[s.center_vertex_id-1] ;
-    Vec3f originMinusCenter =  ori - c;
+    // float delta;
+    Vec3f center = scene.vertex_data[s.center_vertex_id - 1];
     float t, t1, t2;
 
-    C = dotProduct(originMinusCenter,originMinusCenter)-s.radius*s.radius;
-    B = 2*(dotProduct(dir,originMinusCenter));
-    A = dotProduct(dir,dir);
-    float delta = B * B - 4 * A * C ;
+    Vec3f oMinusC = r.origin - center;
 
-    if (delta < 0)
-        return -1;
-    else if (delta >= 0.0)
+    float c = dotProduct(oMinusC,oMinusC) - (pow(s.radius, 2));
+    float b =  2 * dotProduct(r.dir, oMinusC);
+    float a = dotProduct(r.dir, r.dir);
+    float delta = pow(b,2) - (4 * a * c);
+
+    if(delta < 0.0)
     {
-       delta = sqrt(delta);
-        A = 2 * A;
-        t1 = (-B + delta) / A;
-        t2 = (-B - delta) / A;
-
-        if (t1 < t2)
-            t = t1;
-        else
-            t = t2;
+        return -1;
     }
     else
     {
-        t = (-B) / (2 * A);
+        delta = sqrtf(delta);
+        a = 2.0 * a;
+        float t1 = (-b + delta) / a;
+        float t2 = (-b - delta) / a;
+        t = t1 < t2 ? t1 : t2;
     }
-
     return t;
 }
 
@@ -213,243 +204,277 @@ Vec3f L_m(Material mat,Vec3f w_o,Vec3f n,int depth,Vec3f intersection,Camera cur
 {
     Vec3f result;
     Vec3f k_m = mat.mirror;
-    if ((k_m.x <= 0.0001 && k_m.y <= 0.0001 && k_m.z <= 0.0001)|| depth == 0){
+    if (!mat.is_mirror || depth == 0){
         return {0,0,0};
     }
     else {
         //float cos_theta = max(0.0f, );
-        Vec3f w_r =  multScaler(multScaler(n,2),dotProduct(n, w_o))-w_o; 
+        Vec3f w_r =  multScaler(multScaler(n,2.0f),dotProduct(n, w_o))-w_o; 
         w_r = makeUnitVector(w_r);
-        Ray reflection_ray ;
-        reflection_ray.origin = intersection + multScaler(n,scene.shadow_ray_epsilon);
-       // reflection_ray.origin = intersection;
+
+        Ray reflection_ray;
+        reflection_ray.origin = intersection+ multScaler(n,scene.shadow_ray_epsilon);
         reflection_ray.dir = w_r;
-        Vec3f L_i = colorOfPixel(reflection_ray, depth-1,currCam);
-        result = multVector(k_m,L_i);
-        return result;
+        return multVector(k_m, calculateColor(reflection_ray, depth-1,currCam));
     }
 
 }
 //E_i = I/(d^2)
-Vec3f E_i(Vec3f I, float d)
+// Vec3f E_i(Vec3f I, float d)
+// {
+//     return multScaler(I,  1.0 / (d * d));
+// }
+
+Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
 {
-    return multScaler(I,  1.0 / (d * d));
-}
+    int closestObjIndex = -1;
+    ObjectType closestObjType = NONE;
+    float t_min = INF;
+    double t = -1;
 
-Vec3f colorOfPixel(Ray ray, int recursionDepth,Camera currCam){
+    int meshTriangleIndex = -1;
+    // Intersect with all spheres in the scene
+    for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
+    {
+        t = intersectSphere(ray, scene.spheres[sphereIndex]);
+        if (t > 0 && t < t_min)
+        {
+            t_min = t;
+            closestObjIndex = sphereIndex;
+            closestObjType = SPHERE;
+        }
+    }
 
+    // Intersect with all triangles in the scene
+    for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
+    {
+        t = intersectTriangle(ray, scene.triangles[triIndex]);
+        if (t > 0 && t < t_min)
+        {
+            t_min = t;
+            closestObjIndex = triIndex;
+            closestObjType = TRIANGLE;
+        }
+    }
+    // Intersect with all Meshes in the scene
+    vector<Mesh> meshes = scene.meshes;
+    for (int meshIndex = 0; meshIndex < numOfMeshes; meshIndex++)
+    {
+        vector<Face> faces = meshes[meshIndex].faces;
+        for (int j = 0; j < faces.size(); j++)
+        {
+            t = intersectFace(ray, faces[j]);
+            if (t > 0 && t < t_min)
+            {
+                t_min = t;
+                closestObjIndex = meshIndex;
+                closestObjType = MESH;
+                meshTriangleIndex = j;
 
-                int closestObjIndex = -1;
-                ObjectType closestObjType = NONE;
-                float t_min = INF;
-                double t;
+            }
+        }
+    }
+    // SHADING , pixel color = La -> ambient shading is not effected by shadows
+    
+    Vec3f shadedColor = {0,0,0};
+    Vec3f intersectionPoint = ray.origin + multScaler(ray.dir, t_min);
+    Sphere currSphere ;
+    Vec3f w_o, n , center;
+    Material mat;
+    Mesh currMesh;
+    Face face; 
+    Vec3f a_vertex ;
+    Vec3f b_vertex ;
+    Vec3f c_vertex; 
+    Vec3f ab_edge;
+    Vec3f ac_edge;
 
-                int meshTriangleIndex;
+    switch (closestObjType)
+    {
+        case SPHERE:    
+            shadedColor = L_a(scene.materials[scene.spheres[closestObjIndex].material_id-1]);
+            for(int l = 0; l < numOfLights; l++)
+            {    
+                PointLight currLight = scene.point_lights[l];
+                Ray shadowRay;
+                shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
+                shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
+                
+                float tLight = length(currLight.position - intersectionPoint);
+                bool inShadow = false;
+                // do intersection test with all objects, if found one before the light source, skip next calculation
                 // Intersect with all spheres in the scene
                 for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                 {
-                    t = intersectSphere(ray, scene.spheres[sphereIndex]);
-                    if (t > 0 && t < t_min)
+                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    if (t > 0 && t < tLight)
                     {
-                        t_min = t;
-                        closestObjIndex = sphereIndex;
-                        closestObjType = SPHERE;
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
+                        break;
                     }
                 }
+                if(inShadow) continue;
 
                 // Intersect with all triangles in the scene
                 for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
                 {
-                    t = intersectTriangle(ray, scene.triangles[triIndex]);
-                    if (t > 0 && t < t_min)
+                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                    if (t > 0 && t < tLight)
                     {
-                        t_min = t;
-                        closestObjIndex = triIndex;
-                        closestObjType = TRIANGLE;
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
+                        break;
                     }
                 }
+                if(inShadow) continue;
+                
                 // Intersect with all Meshes in the scene
-                vector<Mesh> meshes = scene.meshes;
-                for (int meshIndex = 0; meshIndex < numOfMeshes; meshIndex++)
-                {
-                    vector<Face> faces = meshes[meshIndex].faces;
-                    for (int j = 0; j < faces.size(); j++)
-                    {
-                        t = intersectFace(ray, faces[j]);
-                        if (t > 0 && t < t_min)
-                        {
-                            t_min = t;
-                            closestObjIndex = meshIndex;
-                            closestObjType = MESH;
-                            meshTriangleIndex = j;
+                if(doesIntersectWithMesh(shadowRay, tLight)){
+                    inShadow = true;
+                    continue;
+                }
 
-                        }
+                shadedColor = shadedColor + shadeSphere(closestObjIndex, intersectionPoint, ray.origin, currLight, recursionDepth, currCam);
+            }
+            currSphere = scene.spheres[closestObjIndex];
+            w_o = ray.origin - intersectionPoint; 
+            w_o = makeUnitVector(w_o);
+            center = scene.vertex_data[currSphere.center_vertex_id - 1];
+            n = intersectionPoint - center;
+            n.x /= currSphere.radius;
+            n.y /= currSphere.radius;
+            n.z /= currSphere.radius;
+            n = makeUnitVector(n);
+            shadedColor = shadedColor + L_m(scene.materials[currSphere.material_id -1],w_o,n,recursionDepth,intersectionPoint, currCam);
+
+            break;
+
+        case TRIANGLE:
+            shadedColor = L_a(scene.materials[scene.triangles[closestObjIndex].material_id-1]);
+            for(int l = 0; l < numOfLights; l++)
+            {    
+                PointLight currLight = scene.point_lights[l];
+                Ray shadowRay;
+                shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
+                shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
+                
+                float tLight = length(currLight.position - intersectionPoint);
+                bool inShadow = false;
+                // do intersection test with all objects, if found one before the light source, skip next calculation
+                // Intersect with all spheres in the scene
+                for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
+                {
+                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    if (t > 0 && t < tLight)
+                    {
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
+                        break;
                     }
                 }
-                // SHADING , pixel color = La -> ambient shading is not effected by shadows
-               
-                Vec3f shadedColor = {0,0,0};
-                Vec3f intersectionPoint = ray.origin + multScaler(ray.dir, t_min);
-    
-                switch (closestObjType)
+                if(inShadow) continue;
+
+                // Intersect with all triangles in the scene
+                for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
                 {
-                    case SPHERE:    
-                        shadedColor = L_a(scene.materials[scene.spheres[closestObjIndex].material_id-1]);
-                        for(int l = 0; l < numOfLights; l++)
-                        {    
-                            PointLight currLight = scene.point_lights[l];
-                            Ray shadowRay;
-                            shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
-                            shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
-                            
-                            float tLight = length(currLight.position - intersectionPoint);
-                            bool inShadow = false;
-                            // do intersection test with all objects, if found one before the light source, skip next calculation
-                            // Intersect with all spheres in the scene
-                            for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
-                            {
-                                t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-
-                            // Intersect with all triangles in the scene
-                            for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-                            {
-                                t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-                            
-                            // Intersect with all Meshes in the scene
-                            if(doesIntersectWithMesh(shadowRay, tLight)){
-                                inShadow = true;
-                                continue;
-                            }
-
-                            shadedColor = shadedColor + shadeSphere(closestObjIndex, intersectionPoint, currCam.position, currLight, recursionDepth, currCam);
-                        }
+                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                    if (t > 0 && t < tLight)
+                    {
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
                         break;
-
-                    case TRIANGLE:
-                        shadedColor = L_a(scene.materials[scene.triangles[closestObjIndex].material_id-1]);
-                        for(int l = 0; l < numOfLights; l++)
-                        {    
-                            PointLight currLight = scene.point_lights[l];
-                            Ray shadowRay;
-                            shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
-                            shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
-                            
-                            float tLight = length(currLight.position - intersectionPoint);
-                            bool inShadow = false;
-                            // do intersection test with all objects, if found one before the light source, skip next calculation
-                            // Intersect with all spheres in the scene
-                            for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
-                            {
-                                t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-
-                            // Intersect with all triangles in the scene
-                            for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-                            {
-                                t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-                            
-                            // Intersect with all Meshes in the scene
-                            if(doesIntersectWithMesh(shadowRay, tLight)){
-                                inShadow = true;
-                                continue;
-                            }
-
-                            shadedColor = shadedColor + shadeTriangle(closestObjIndex, intersectionPoint, currCam.position, currLight,recursionDepth,currCam);
-                        }
-                        break;
-
-                    case MESH:
-                        shadedColor = L_a(scene.materials[scene.meshes[closestObjIndex].material_id-1]);
-                        for(int l = 0; l < numOfLights; l++)
-                        {    
-                            PointLight currLight = scene.point_lights[l];
-                            Ray shadowRay;
-                            shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
-                            shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
-                            
-                            float tLight = length(currLight.position - intersectionPoint);
-                            bool inShadow = false;
-                            // do intersection test with all objects, if found one before the light source, skip next calculation
-                            // Intersect with all spheres in the scene
-                            for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
-                            {
-                                t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-
-                            // Intersect with all triangles in the scene
-                            for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-                            {
-                                t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
-                                if (t > 0 && t < tLight)
-                                {
-                                    // found one obj that intersects before the light source. quit
-                                    inShadow = true;
-                                    break;
-                                }
-                            }
-                            if(inShadow) continue;
-                            
-                            // Intersect with all Meshes in the scene
-                            if(doesIntersectWithMesh(shadowRay, tLight)){
-                                inShadow = true;
-                                continue;
-                            }
-
-                            shadedColor = shadedColor + shadeMesh(closestObjIndex, intersectionPoint, currCam.position, meshTriangleIndex, currLight,recursionDepth,currCam);
-                        }
-                        break;
-
-                    case NONE:
-                        // use bg color
-                        shadedColor.x = bgColor.x;
-                        shadedColor.y = bgColor.y;
-                        shadedColor.z = bgColor.z;
-                        break;
-
-                    default:
-                        cout << "ERROR -- Closest object type is not set." << endl;
-                        break;
+                    }
+                }
+                if(inShadow) continue;
+                
+                // Intersect with all Meshes in the scene
+                if(doesIntersectWithMesh(shadowRay, tLight)){
+                    inShadow = true;
+                    continue;
                 }
 
-                return shadedColor;
+                shadedColor = shadedColor + shadeTriangle(closestObjIndex, intersectionPoint, ray.origin, currLight,recursionDepth,currCam);
+            }
+            break;
+
+        case MESH:
+            shadedColor = L_a(scene.materials[scene.meshes[closestObjIndex].material_id-1]);
+            for(int l = 0; l < numOfLights; l++)
+            {    
+                PointLight currLight = scene.point_lights[l];
+                Ray shadowRay;
+                shadowRay.dir = makeUnitVector(currLight.position - intersectionPoint);
+                shadowRay.origin = intersectionPoint + multScaler(shadowRay.dir, scene.shadow_ray_epsilon);
+                
+                float tLight = length(currLight.position - intersectionPoint);
+                bool inShadow = false;
+                // do intersection test with all objects, if found one before the light source, skip next calculation
+                // Intersect with all spheres in the scene
+                for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
+                {
+                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    if (t > 0 && t < tLight)
+                    {
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
+                        break;
+                    }
+                }
+                if(inShadow) continue;
+
+                // Intersect with all triangles in the scene
+                for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
+                {
+                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                    if (t > 0 && t < tLight)
+                    {
+                        // found one obj that intersects before the light source. quit
+                        inShadow = true;
+                        break;
+                    }
+                }
+                if(inShadow) continue;
+                
+                // Intersect with all Meshes in the scene
+                if(doesIntersectWithMesh(shadowRay, tLight)){
+                    inShadow = true;
+                    continue;
+                }
+
+                shadedColor = shadedColor + shadeMesh(closestObjIndex, intersectionPoint, ray.origin, meshTriangleIndex, currLight,recursionDepth,currCam);
+            }
+            currMesh = meshes[closestObjIndex];
+            mat = scene.materials[currMesh.material_id-1];
+
+            w_o = ray.origin - intersectionPoint; 
+            w_o = makeUnitVector(w_o);
+            face = currMesh.faces[meshTriangleIndex];
+
+            a_vertex = scene.vertex_data[face.v0_id -1];
+            b_vertex = scene.vertex_data[face.v1_id -1];
+            c_vertex = scene.vertex_data[face.v2_id -1];
+            ab_edge = b_vertex - a_vertex;
+            ac_edge = c_vertex - a_vertex;
+
+            n = cross(ab_edge, ac_edge);
+            n = makeUnitVector(n);
+            shadedColor = shadedColor + L_m(mat,w_o,n,recursionDepth,intersectionPoint, currCam);
+
+            break;
+
+        case NONE:
+            // use bg color
+            shadedColor.x = bgColor.x;
+            shadedColor.y = bgColor.y;
+            shadedColor.z = bgColor.z;
+            break;
+
+        default:
+            cout << "ERROR -- Closest object type is not set." << endl;
+            break;
+    }
+    return shadedColor;
 }
 
 int main(int argc, char *argv[])
@@ -464,10 +489,6 @@ int main(int argc, char *argv[])
     numOfLights = scene.point_lights.size();
     bgColor = scene.background_color;
 
-    // ·NearPlane attribute defines the coordinates of the image plane with Left, Right, Bottom,
-    // Top floating point parameters, respectively.
-    // ·NearDistance defines the distance of the image plane to the camera.
-
     for (int camIndex = 0; camIndex < numOfCams; camIndex++)
     {
         Camera currCam = cameras[camIndex];
@@ -476,25 +497,14 @@ int main(int argc, char *argv[])
 
         unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
 
-        
         // Iterate over the image plane
         for (int j = 0; j < imageHeight; j++)
         {
             for (int i = 0; i < imageWidth; i++)
             {
                 //RAY TRACING
-                //compute viewing ray from e to s(i,j)
                 Ray ray = generateRay(i, j, currCam);
-                Vec3f shadedColor = colorOfPixel(ray,recursionDepth, currCam);
-
-                //      compute shadow ray s from x to l:
-                //      for each object p:
-                //          if s intersects p before the light source:
-                //              continue the light loop
-                //      pixel color = pixel color + Ld +Ls ->diffuse and specular components
-
-                // do not forget clamping the pixel value to [0,255] range and rounding it to the nearest integer
-                
+                Vec3f shadedColor = calculateColor(ray,recursionDepth, currCam);
                 Vec3i rayColor = clamp(shadedColor);
 
                 int imgIndex = 3 * (i + j * currCam.image_width);
@@ -510,7 +520,6 @@ int main(int argc, char *argv[])
 bool doesIntersectWithMesh(Ray ray, float tLight)
 {
     vector<Mesh> meshes = scene.meshes;
-    int numOfMeshes = scene.meshes.size();
     float t = 0;
     for (int meshIndex = 0; meshIndex < numOfMeshes; meshIndex++)
     {
@@ -526,38 +535,35 @@ bool doesIntersectWithMesh(Ray ray, float tLight)
     }
     return false;
 }
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam)
+Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
 {
     Sphere curr_sphere = scene.spheres[objIndex];
     Material mat = scene.materials[curr_sphere.material_id -1];
 
     //compute shadow rays from x to l;
     Vec3f w_i = currLight.position - intersectionPoint;
-    Vec3f w_o = camPos - intersectionPoint; 
+    Vec3f w_o = rayOrigin - intersectionPoint; 
 
     Vec3f I = currLight.intensity;
-    Vec3f E = E_i(I, length(w_i));
+
+    float dist = length(w_i);
+    Vec3f E = multScaler(I,  1.0 / pow(dist,2));
+
     Vec3f center = scene.vertex_data[curr_sphere.center_vertex_id - 1];
     Vec3f n = intersectionPoint - center;
-    n = multScaler(n, 1.0 / curr_sphere.radius);
-    
-    Vec3f res = L_d(mat, makeUnitVector(w_i), n, E);    
-    
-    float theta = acos(dotProduct(makeUnitVector(w_i),n) );
+
+    n = makeUnitVector(n);
+    w_i = makeUnitVector(w_i);
+    w_o = makeUnitVector(w_o);
+    Vec3f spec = {0,0,0};
+    float theta = acos(dotProduct(w_i,n));
     if (theta<90) {
         Vec3f h = makeUnitVector(w_i+w_o);
-        Vec3f L_spe = L_s(mat, h, n, E);
-        res = res + L_spe;
+        spec = L_s(mat, h, n, E);
     }
-    Vec3f L_mir = L_m(mat,makeUnitVector(w_o),n,depth,intersectionPoint, currCam);
-    res = res + L_mir;
-    // foreach object p:
-    //     if s intersects p before the light source:
-    //     continue the light loop; // point is in shadow – no contribution from this light
-    //     pixel color += Ld + Ls // add diffuse and specular components for this light source
-    return res;
+    return spec + L_d(mat, w_i, n, E);
 }
-Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam)
+Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
 {
     Triangle currTri = scene.triangles[objIndex];
     Material mat = scene.materials[currTri.material_id -1];
@@ -565,31 +571,43 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLi
     //compute shadow rays from x to l;
     
     Vec3f w_i = currLight.position - intersectionPoint;
-    Vec3f w_o = camPos - intersectionPoint;
+    Vec3f w_o = rayOrigin - intersectionPoint;
 
     Vec3f I = currLight.intensity;
-    Vec3f E = E_i(I, length(w_i));
+    float dist = length(w_i);
+    Vec3f E = multScaler(I,  1.0 / pow(dist,2));
+
     Vec3f a_vertex = scene.vertex_data[currTri.indices.v0_id-1];
     Vec3f b_vertex = scene.vertex_data[currTri.indices.v1_id-1];
     Vec3f c_vertex = scene.vertex_data[currTri.indices.v2_id-1];
     Vec3f ab_edge = b_vertex - a_vertex;
     Vec3f ac_edge = c_vertex - a_vertex;
     Vec3f n = cross(ab_edge,ac_edge);
-    // n = multScaler(n,1/length(n));
 
-    return L_d(mat, makeUnitVector(w_i), makeUnitVector(n), E);
+    n = makeUnitVector(n);
+    w_i = makeUnitVector(w_i);
+    w_o = makeUnitVector(w_o);
+    float theta = acos(dotProduct(w_i,n));
+    Vec3f spec = {0,0,0};
+    if (theta<90) {
+        Vec3f h = makeUnitVector(w_i+w_o);
+        Vec3f spec = L_s(mat, h, n, E);
+    }
+    return spec + L_d(mat, w_i, n, E) + L_m(mat, w_o, n, depth, intersectionPoint, currCam);
 }
-Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam )
+Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam )
 {
     Mesh currMesh = scene.meshes[objIndex];
     Material mat = scene.materials[currMesh.material_id - 1];
     Face face = currMesh.faces[meshTriangleIndex];
     
     Vec3f w_i = currLight.position - intersectionPoint;
-    Vec3f w_o = camPos - intersectionPoint;
+    Vec3f w_o = rayOrigin - intersectionPoint;
 
     Vec3f I = currLight.intensity;
-    Vec3f E = E_i(I, length(w_i));
+    float dist = length(w_i);
+    Vec3f E = multScaler(I,  1.0 / pow(dist,2));
+
     Vec3f a_vertex = scene.vertex_data[face.v0_id -1];
     Vec3f b_vertex = scene.vertex_data[face.v1_id -1];
     Vec3f c_vertex = scene.vertex_data[face.v2_id -1];
@@ -597,7 +615,15 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTria
     Vec3f ac_edge = c_vertex - a_vertex;
 
     Vec3f n = cross(ab_edge, ac_edge);
-    n = multScaler(n,1.0 / length(n));
+    n = makeUnitVector(n);
+    w_i = makeUnitVector(w_i);
+    w_o = makeUnitVector(w_o);
 
-    return L_d(mat, makeUnitVector(w_i), n, E) + L_m(mat, makeUnitVector(w_o), n, depth, intersectionPoint, currCam);
+    float theta = acos(dotProduct(w_i,n));
+    Vec3f spec = {0,0,0};
+    if (theta<90) {
+        Vec3f h = makeUnitVector(w_i+w_o);
+        Vec3f spec = L_s(mat, h, n, E);
+    }
+    return spec + L_d(mat, w_i, n, E);
 }

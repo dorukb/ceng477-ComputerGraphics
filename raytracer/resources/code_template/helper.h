@@ -14,7 +14,7 @@ Vec3f multScaler(const Vec3f &a,float s);
 Vec3f multVector(const Vec3f &a,const Vec3f &b);
 Vec3f cross(const Vec3f &first, const Vec3f &second);
 
-float dotProduct(const Vec3f &a, Vec3f &b);
+float dotProduct(const Vec3f &a, const Vec3f &b);
 float length(Vec3f a);
 Vec3f makeUnitVector(Vec3f a);
 float determinant(float m [3][3]);

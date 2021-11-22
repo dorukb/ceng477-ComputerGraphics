@@ -50,22 +50,21 @@ Vec3f multVector(const Vec3f &a,const Vec3f &b){
 
     return result;
 }
-float dotProduct(const Vec3f &a, Vec3f &b)
+float dotProduct(const Vec3f &a, const Vec3f &b)
 {
-    double result = a.x*b.x + a.y*b.y + a.z*b.z;
+    float result = a.x*b.x + a.y*b.y + a.z*b.z;
     return result;
 }
 
 float length(Vec3f a)
 {
-    return sqrt((a.x*a.x)+(a.y*a.y)+(a.z*a.z));
+    return sqrtf((a.x*a.x)+(a.y*a.y)+(a.z*a.z));
 }
 
 Vec3f makeUnitVector(Vec3f a)
 {
     Vec3f result;
-    float l;
-    l = length(a);
+    float l = length(a);
     result.x = a.x/l;
     result.y = a.y/l;
     result.z = a.z/l;
