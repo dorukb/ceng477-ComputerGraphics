@@ -134,25 +134,24 @@ float intersectTriangle(Ray ray, Triangle tri)
 }
 float intersectSphere(Ray r, Sphere s)
 {
+    Vec3f dir = r.dir ;
+    Vec3f ori = r.origin;
+    
     float A, B, C; //constants for the quadratic equation
-    float delta;
-    Vec3f c = scene.vertex_data[s.center_vertex_id - 1];
+    Vec3f c = scene.vertex_data[s.center_vertex_id-1] ;
+    Vec3f originMinusCenter =  ori - c;
     float t, t1, t2;
 
-    C = (r.origin.x - c.x) * (r.origin.x - c.x) + (r.origin.y - c.y) * (r.origin.y - c.y) + (r.origin.z - c.z) * (r.origin.z - c.z) - s.radius * s.radius;
-    B = 2 * r.dir.x * (r.origin.x - c.x) + 2 * r.dir.y * (r.origin.y - c.y) + 2 * r.dir.z * (r.origin.z - c.z);
-    A = r.dir.x * r.dir.x + r.dir.y * r.dir.y + r.dir.z * r.dir.z;
-    delta = B * B - 4 * A * C;
+    C = dotProduct(originMinusCenter,originMinusCenter)-s.radius*s.radius;
+    B = 2*(dotProduct(dir,originMinusCenter));
+    A = dotProduct(dir,dir);
+    float delta = B * B - 4 * A * C ;
 
     if (delta < 0)
         return -1;
-    else if (delta == 0)
+    else if (delta >= 0.0)
     {
-        t = -B / (2 * A);
-    }
-    else
-    {
-        delta = sqrt(delta);
+       delta = sqrt(delta);
         A = 2 * A;
         t1 = (-B + delta) / A;
         t2 = (-B - delta) / A;
@@ -161,6 +160,10 @@ float intersectSphere(Ray r, Sphere s)
             t = t1;
         else
             t = t2;
+    }
+    else
+    {
+        t = (-B) / (2 * A);
     }
 
     return t;
