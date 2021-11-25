@@ -2,6 +2,7 @@
 #include "ppm.h"
 #include "helper.h"
 #include <math.h>
+#include <thread>
 
 #define INF 999999.0
 
@@ -10,11 +11,16 @@ typedef unsigned char RGB[3];
 using namespace parser;
 using namespace std;
 
+struct traceArguments{
+    int cameraIndex;
+    int threadIndex;
+    unsigned char *imagePtr;
+};
 parser::Scene scene;
 
-Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
-Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam);
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
+Vec3f shadeTriangle(int objIndex,Material currMat, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
+Vec3f shadeMesh(int objIndex, Material currMat, Vec3f intersectionPoint, Vec3f camPos,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam);
+Vec3f shadeSphere(int objIndex, Material currMat, Vec3f intersectionPoint, Vec3f camPos, PointLight currLight,int depth,Camera currCam);
 bool doesIntersectWithMesh(Ray ray, float tLight);
 Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam);
 int numOfSpheres;
@@ -24,7 +30,9 @@ int numOfLights;
 int numOfCams ;
 Vec3i bgColor;
 vector<Vec3f> triNormals;
+vector<vector<Vec3f>> meshFaceNormals;
 
+static int threadCount = 8;
 Ray generateRay(int i, int j, Camera cam)
 {
     Ray result;
@@ -161,6 +169,44 @@ float intersectSphere(Ray r, Sphere s)
 }
 
 
+void calculateTriNormals()
+{
+    Vec3f a,b,c,ab,ac,n;
+    for(int i = 0; i < numOfTriangles; i++)
+    {
+        a = scene.vertex_data[scene.triangles[i].indices.v0_id -1];
+        b = scene.vertex_data[scene.triangles[i].indices.v1_id -1];
+        c = scene.vertex_data[scene.triangles[i].indices.v2_id -1];
+        ab = b - a;
+        ac = c - a;
+
+        n = makeUnitVector(cross(ab, ac));
+        triNormals[i] = n;
+    }
+}
+void calculateMeshFaceNormals()
+{
+    Vec3f a,b,c,ab,ac,n;
+    Mesh mesh;
+    for(int i = 0; i < numOfMeshes; i++)
+    {   
+        mesh = scene.meshes[i];
+        int numOfFaces = mesh.faces.size();    
+        meshFaceNormals[i].resize(numOfFaces);
+        for(int j = 0; j < numOfFaces; j++)
+        {
+            // calculate normal for this face, store it in meshFaceNormals[i][j];
+            a = scene.vertex_data[mesh.faces[j].v0_id -1];
+            b = scene.vertex_data[mesh.faces[j].v1_id -1];
+            c = scene.vertex_data[mesh.faces[j].v2_id -1];
+            ab = b - a;
+            ac = c - a;
+
+            n = makeUnitVector(cross(ab, ac));
+            meshFaceNormals[i][j] = n;
+        }
+    }
+}
 enum ObjectType
 {
     NONE,
@@ -280,19 +326,13 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
     Vec3f intersectionPoint = ray.origin + multScaler(ray.dir, t_min);
     Sphere currSphere ;
     Vec3f w_o, n , center;
-    Material mat;
-    Mesh currMesh;
-    Face face; 
-    Vec3f a_vertex ;
-    Vec3f b_vertex ;
-    Vec3f c_vertex; 
-    Vec3f ab_edge;
-    Vec3f ac_edge;
+    Material currMat;
 
     switch (closestObjType)
     {
         case SPHERE:    
-            shadedColor = L_a(scene.materials[scene.spheres[closestObjIndex].material_id-1]);
+            currMat = scene.materials[scene.spheres[closestObjIndex].material_id-1];
+            shadedColor = L_a(currMat);
             for(int l = 0; l < numOfLights; l++)
             {    
                 PointLight currLight = scene.point_lights[l];
@@ -335,7 +375,7 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                     continue;
                 }
 
-                shadedColor = shadedColor + shadeSphere(closestObjIndex, intersectionPoint, ray.origin, currLight, recursionDepth, currCam);
+                shadedColor = shadedColor + shadeSphere(closestObjIndex, currMat, intersectionPoint, ray.origin, currLight, recursionDepth, currCam);
             }
             currSphere = scene.spheres[closestObjIndex];
             w_o = ray.origin - intersectionPoint; 
@@ -351,7 +391,8 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
             break;
 
         case TRIANGLE:
-            shadedColor = L_a(scene.materials[scene.triangles[closestObjIndex].material_id-1]);
+            currMat = scene.materials[scene.triangles[closestObjIndex].material_id-1];
+            shadedColor = L_a(currMat);
             for(int l = 0; l < numOfLights; l++)
             {    
                 PointLight currLight = scene.point_lights[l];
@@ -394,12 +435,20 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                     continue;
                 }
 
-                shadedColor = shadedColor + shadeTriangle(closestObjIndex, intersectionPoint, ray.origin, currLight,recursionDepth,currCam);
+                shadedColor = shadedColor + shadeTriangle(closestObjIndex, currMat, intersectionPoint, ray.origin, currLight,recursionDepth,currCam);
             }
+            w_o = ray.origin - intersectionPoint; 
+            w_o = makeUnitVector(w_o);
+
+            // get the precalculated normal for this triangle.
+            n = triNormals[closestObjIndex];
+            shadedColor = shadedColor + L_m(currMat,w_o,n,recursionDepth,intersectionPoint, currCam);
+
             break;
 
         case MESH:
-            shadedColor = L_a(scene.materials[scene.meshes[closestObjIndex].material_id-1]);
+            currMat = scene.materials[scene.meshes[closestObjIndex].material_id-1];
+            shadedColor = L_a(currMat);
             for(int l = 0; l < numOfLights; l++)
             {    
                 PointLight currLight = scene.point_lights[l];
@@ -442,24 +491,14 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                     continue;
                 }
 
-                shadedColor = shadedColor + shadeMesh(closestObjIndex, intersectionPoint, ray.origin, meshTriangleIndex, currLight,recursionDepth,currCam);
+                shadedColor = shadedColor + shadeMesh(closestObjIndex, currMat, intersectionPoint, ray.origin, meshTriangleIndex, currLight,recursionDepth,currCam);
             }
-            currMesh = meshes[closestObjIndex];
-            mat = scene.materials[currMesh.material_id-1];
-
             w_o = ray.origin - intersectionPoint; 
             w_o = makeUnitVector(w_o);
-            face = currMesh.faces[meshTriangleIndex];
 
-            a_vertex = scene.vertex_data[face.v0_id -1];
-            b_vertex = scene.vertex_data[face.v1_id -1];
-            c_vertex = scene.vertex_data[face.v2_id -1];
-            ab_edge = b_vertex - a_vertex;
-            ac_edge = c_vertex - a_vertex;
-
-            n = cross(ab_edge, ac_edge);
-            n = makeUnitVector(n);
-            shadedColor = shadedColor + L_m(mat,w_o,n,recursionDepth,intersectionPoint, currCam);
+            // get the precalculated normal for this face.
+            n = meshFaceNormals[closestObjIndex][meshTriangleIndex];
+            shadedColor = shadedColor + L_m(currMat,w_o,n,recursionDepth,intersectionPoint, currCam);
 
             break;
 
@@ -477,6 +516,39 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
     return shadedColor;
 }
 
+void raytraceMain(traceArguments args)
+{
+    int threadIndex = args.threadIndex;
+    int cameraIndex = args.cameraIndex;
+
+    Camera currCam = scene.cameras[cameraIndex];
+    int recursionDepth = scene.max_recursion_depth;
+    // calculate the starting and ending indices for width & height using these parameters.
+    int width = currCam.image_width;
+    int height = currCam.image_height;
+
+    int startingHeight = threadIndex * (height / 8);
+    int endingHeight = startingHeight + (height / 8);
+
+    // unsigned char *image = ;
+    // Iterate over the image plane
+    for (int j = startingHeight; j <= endingHeight; j++)
+    {
+        for (int i = 0; i < width; i++)
+        {
+            //RAY TRACING
+            Ray ray = generateRay(i, j, currCam);
+            Vec3f shadedColor = calculateColor(ray,recursionDepth, currCam);
+            Vec3i rayColor = clamp(shadedColor);
+
+            int imgIndex = 3 * (i + j * currCam.image_width);
+            args.imagePtr[imgIndex] = (unsigned char)(rayColor.x);
+            args.imagePtr[imgIndex + 1] = (unsigned char)(rayColor.y);
+            args.imagePtr[imgIndex + 2] = (unsigned char)(rayColor.z);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     scene.loadFromXml(argv[1]);
@@ -489,6 +561,13 @@ int main(int argc, char *argv[])
     numOfLights = scene.point_lights.size();
     bgColor = scene.background_color;
 
+
+    // Precalculate mesh face normals here
+    meshFaceNormals.resize(numOfMeshes);
+    calculateMeshFaceNormals();
+
+    triNormals.resize(numOfTriangles);
+    calculateTriNormals();
     for (int camIndex = 0; camIndex < numOfCams; camIndex++)
     {
         Camera currCam = cameras[camIndex];
@@ -497,22 +576,41 @@ int main(int argc, char *argv[])
 
         unsigned char *image = new unsigned char[imageWidth * imageHeight * 3];
 
-        // Iterate over the image plane
-        for (int j = 0; j < imageHeight; j++)
-        {
-            for (int i = 0; i < imageWidth; i++)
-            {
-                //RAY TRACING
-                Ray ray = generateRay(i, j, currCam);
-                Vec3f shadedColor = calculateColor(ray,recursionDepth, currCam);
-                Vec3i rayColor = clamp(shadedColor);
+        vector<thread> traceThreads;
+        traceThreads.resize(threadCount);
 
-                int imgIndex = 3 * (i + j * currCam.image_width);
-                image[imgIndex] = (unsigned char)(rayColor.x);
-                image[imgIndex + 1] = (unsigned char)(rayColor.y);
-                image[imgIndex + 2] = (unsigned char)(rayColor.z);
-            }
+        vector<traceArguments> args;
+        args.resize(threadCount);
+        for(int t = 0; t < threadCount; t++)
+        {
+            args[t].cameraIndex = camIndex;
+            args[t].threadIndex = t;
+            args[t].imagePtr = image;
+            traceThreads[t] = thread(raytraceMain, args[t]);
         }
+        // // Iterate over the image plane
+        // for (int j = 0; j < imageHeight; j++)
+        // {
+        //     for (int i = 0; i < imageWidth; i++)
+        //     {
+        //         //RAY TRACING
+        //         Ray ray = generateRay(i, j, currCam);
+        //         Vec3f shadedColor = calculateColor(ray,recursionDepth, currCam);
+        //         Vec3i rayColor = clamp(shadedColor);
+
+        //         int imgIndex = 3 * (i + j * currCam.image_width);
+        //         image[imgIndex] = (unsigned char)(rayColor.x);
+        //         image[imgIndex + 1] = (unsigned char)(rayColor.y);
+        //         image[imgIndex + 2] = (unsigned char)(rayColor.z);
+        //     }
+        // }
+         // Wait for all threads to finish before terminating main.
+        // cout <<" threads created" <<  endl;
+        for(int i = 0; i < threadCount; i++)
+        {
+            traceThreads[i].join();
+        }
+        // cout <<"all threads joined" << endl;
         write_ppm(currCam.image_name.c_str(), image, imageWidth, imageHeight);
     }
 }
@@ -535,10 +633,9 @@ bool doesIntersectWithMesh(Ray ray, float tLight)
     }
     return false;
 }
-Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
+Vec3f shadeSphere(int objIndex, Material currMat, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
 {
     Sphere curr_sphere = scene.spheres[objIndex];
-    Material mat = scene.materials[curr_sphere.material_id -1];
 
     //compute shadow rays from x to l;
     Vec3f w_i = currLight.position - intersectionPoint;
@@ -559,17 +656,13 @@ Vec3f shadeSphere(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, PointL
     float theta = acos(dotProduct(w_i,n));
     if (theta<90) {
         Vec3f h = makeUnitVector(w_i+w_o);
-        spec = L_s(mat, h, n, E);
+        spec = L_s(currMat, h, n, E);
     }
-    return spec + L_d(mat, w_i, n, E);
+    return spec + L_d(currMat, w_i, n, E);
 }
-Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
+Vec3f shadeTriangle(int objIndex, Material currMat, Vec3f intersectionPoint, Vec3f rayOrigin, PointLight currLight,int depth,Camera currCam)
 {
-    Triangle currTri = scene.triangles[objIndex];
-    Material mat = scene.materials[currTri.material_id -1];
-
-    //compute shadow rays from x to l;
-    
+    //compute shadow rays from x to l;   
     Vec3f w_i = currLight.position - intersectionPoint;
     Vec3f w_o = rayOrigin - intersectionPoint;
 
@@ -577,30 +670,19 @@ Vec3f shadeTriangle(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin, Poin
     float dist = length(w_i);
     Vec3f E = multScaler(I,  1.0 / pow(dist,2));
 
-    Vec3f a_vertex = scene.vertex_data[currTri.indices.v0_id-1];
-    Vec3f b_vertex = scene.vertex_data[currTri.indices.v1_id-1];
-    Vec3f c_vertex = scene.vertex_data[currTri.indices.v2_id-1];
-    Vec3f ab_edge = b_vertex - a_vertex;
-    Vec3f ac_edge = c_vertex - a_vertex;
-    Vec3f n = cross(ab_edge,ac_edge);
-
-    n = makeUnitVector(n);
+    Vec3f n = triNormals[objIndex];
     w_i = makeUnitVector(w_i);
     w_o = makeUnitVector(w_o);
     float theta = acos(dotProduct(w_i,n));
     Vec3f spec = {0,0,0};
     if (theta<90) {
         Vec3f h = makeUnitVector(w_i+w_o);
-        Vec3f spec = L_s(mat, h, n, E);
+        spec = L_s(currMat, h, n, E);
     }
-    return spec + L_d(mat, w_i, n, E) + L_m(mat, w_o, n, depth, intersectionPoint, currCam);
+    return spec + L_d(currMat, w_i, n, E);
 }
-Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam )
-{
-    Mesh currMesh = scene.meshes[objIndex];
-    Material mat = scene.materials[currMesh.material_id - 1];
-    Face face = currMesh.faces[meshTriangleIndex];
-    
+Vec3f shadeMesh(int objIndex, Material currMat, Vec3f intersectionPoint, Vec3f rayOrigin,int meshTriangleIndex, PointLight currLight,int depth,Camera currCam )
+{   
     Vec3f w_i = currLight.position - intersectionPoint;
     Vec3f w_o = rayOrigin - intersectionPoint;
 
@@ -608,14 +690,7 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin,int meshT
     float dist = length(w_i);
     Vec3f E = multScaler(I,  1.0 / pow(dist,2));
 
-    Vec3f a_vertex = scene.vertex_data[face.v0_id -1];
-    Vec3f b_vertex = scene.vertex_data[face.v1_id -1];
-    Vec3f c_vertex = scene.vertex_data[face.v2_id -1];
-    Vec3f ab_edge = b_vertex - a_vertex;
-    Vec3f ac_edge = c_vertex - a_vertex;
-
-    Vec3f n = cross(ab_edge, ac_edge);
-    n = makeUnitVector(n);
+    Vec3f n = meshFaceNormals[objIndex][meshTriangleIndex];
     w_i = makeUnitVector(w_i);
     w_o = makeUnitVector(w_o);
 
@@ -623,7 +698,7 @@ Vec3f shadeMesh(int objIndex, Vec3f intersectionPoint, Vec3f rayOrigin,int meshT
     Vec3f spec = {0,0,0};
     if (theta<90) {
         Vec3f h = makeUnitVector(w_i+w_o);
-        Vec3f spec = L_s(mat, h, n, E);
+        spec = L_s(currMat, h, n, E);
     }
-    return spec + L_d(mat, w_i, n, E);
+    return spec + L_d(currMat, w_i, n, E);
 }
