@@ -3,7 +3,8 @@
 #include "helper.h"
 #include <math.h>
 #include <thread>
-#include <time.h>
+#include <chrono>
+
 
 #define INF 999999.0
 
@@ -620,7 +621,7 @@ void raytraceMain(traceArguments args)
 
 int main(int argc, char *argv[])
 {
-    clock_t tStart = clock();
+    auto start = std::chrono::steady_clock::now();
     scene.loadFromXml(argv[1]);
     vector<Camera> cameras = scene.cameras;
     numOfCams = cameras.size();
@@ -664,12 +665,14 @@ int main(int argc, char *argv[])
             traceThreads[i].join();
         }
         // cout <<"all threads joined" << endl;
-        
+  
         write_ppm(currCam.image_name.c_str(), image, imageWidth, imageHeight);
         
         
     }
-    printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
     return 0;
 }
 
