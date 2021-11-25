@@ -532,7 +532,7 @@ void raytraceMain(traceArguments args)
 
     // unsigned char *image = ;
     // Iterate over the image plane
-    for (int j = startingHeight; j <= endingHeight; j++)
+    for (int j = startingHeight; j < endingHeight; j++)
     {
         for (int i = 0; i < width; i++)
         {
