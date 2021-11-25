@@ -666,9 +666,11 @@ int main(int argc, char *argv[])
         // cout <<"all threads joined" << endl;
         
         write_ppm(currCam.image_name.c_str(), image, imageWidth, imageHeight);
-        printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
-        return 0;
+        
+        
     }
+    printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+    return 0;
 }
 
 bool doesIntersectWithMesh(Ray ray, float tLight)
