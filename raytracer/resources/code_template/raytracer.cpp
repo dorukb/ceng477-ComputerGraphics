@@ -108,12 +108,9 @@ float intersectFace(Ray ray, Face face,Vec3f a, Vec3f b, Vec3f c)
     return t;
 }
 
-float intersectTriangle(Ray ray, Triangle tri)
+float intersectTriangle(Ray ray, Triangle tri,Vec3f a, Vec3f b, Vec3f c)
 {
-    Vec3f a = scene.vertex_data[tri.indices.v0_id - 1];
-    Vec3f b = scene.vertex_data[tri.indices.v1_id - 1];
-    Vec3f c = scene.vertex_data[tri.indices.v2_id - 1];
-
+   
     float matrixA[3][3] = {a.x - b.x, a.x - c.x, ray.dir.x,
                            a.y - b.y, a.y - c.y, ray.dir.y,
                            a.z - b.z, a.z - c.z, ray.dir.z};
@@ -142,13 +139,11 @@ float intersectTriangle(Ray ray, Triangle tri)
     float t = determinant(matrixT) / detA;
     return t;
 }
-float intersectSphere(Ray r, Sphere s)
+float intersectSphere(Ray r, Sphere s, Vec3f center, Vec3f oMinusC)
 {
     // float delta;
-    Vec3f center = scene.vertex_data[s.center_vertex_id - 1];
+    
     float t, t1, t2;
-
-    Vec3f oMinusC = r.origin - center;
 
     float c = dotProduct(oMinusC,oMinusC) - (pow(s.radius, 2));
     float b =  2 * dotProduct(r.dir, oMinusC);
@@ -286,10 +281,17 @@ bool checkIntersection(Ray ray, int recursionDepth,Camera currCam)
     double t = -1;
 
     int meshTriangleIndex = -1;
+    // Variables in loops
+    Vec3f a,b,c,centerSend,oMinusC;
+      
+
     // Intersect with all spheres in the scene
     for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
     {
-        t = intersectSphere(ray, scene.spheres[sphereIndex]);
+        Sphere s = scene.spheres[sphereIndex];
+        centerSend = scene.vertex_data[s.center_vertex_id - 1];
+        oMinusC = ray.origin - centerSend;
+        t = intersectSphere(ray,s,centerSend,oMinusC );
         if (t > 0 && t < t_min)
         {
             return true;
@@ -298,8 +300,12 @@ bool checkIntersection(Ray ray, int recursionDepth,Camera currCam)
 
     // Intersect with all triangles in the scene
     for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-    {
-        t = intersectTriangle(ray, scene.triangles[triIndex]);
+    {   
+        Triangle tri = scene.triangles[triIndex];
+        a = scene.vertex_data[tri.indices.v0_id - 1];
+        b = scene.vertex_data[tri.indices.v1_id - 1];
+        c = scene.vertex_data[tri.indices.v2_id - 1];
+        t = intersectTriangle(ray, tri ,a,b,c);
         if (t > 0 && t < t_min)
         {
             return true;
@@ -314,9 +320,9 @@ bool checkIntersection(Ray ray, int recursionDepth,Camera currCam)
         for (int j = 0; j < numOfFaces; j++)
         {   
             Face face = faces[j];
-            Vec3f a = scene.vertex_data[face.v0_id - 1];
-            Vec3f b = scene.vertex_data[face.v1_id - 1];
-            Vec3f c = scene.vertex_data[face.v2_id - 1];
+            a = scene.vertex_data[face.v0_id - 1];
+            b = scene.vertex_data[face.v1_id - 1];
+            c = scene.vertex_data[face.v2_id - 1];
             t = intersectFace(ray, face,a,b,c);
             if (t > 0 && t < t_min)
             {
@@ -337,10 +343,17 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
     double t = -1;
 
     int meshTriangleIndex = -1;
+
+    // Variables in loops
+    Vec3f a,b,c,centerSend,oMinusC;
+
     // Intersect with all spheres in the scene
     for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
     {
-        t = intersectSphere(ray, scene.spheres[sphereIndex]);
+        Sphere s = scene.spheres[sphereIndex];
+        centerSend = scene.vertex_data[s.center_vertex_id - 1];
+        oMinusC = ray.origin - centerSend;
+        t = intersectSphere(ray,s,centerSend,oMinusC );
         if (t > 0 && t < t_min)
         {
             t_min = t;
@@ -352,7 +365,11 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
     // Intersect with all triangles in the scene
     for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
     {
-        t = intersectTriangle(ray, scene.triangles[triIndex]);
+        Triangle tri = scene.triangles[triIndex];
+        a = scene.vertex_data[tri.indices.v0_id - 1];
+        b = scene.vertex_data[tri.indices.v1_id - 1];
+        c = scene.vertex_data[tri.indices.v2_id - 1];
+        t = intersectTriangle(ray, tri,a,b,c);
         if (t > 0 && t < t_min)
         {
             t_min = t;
@@ -369,9 +386,9 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
         for (int j = 0; j < numOfFaces; j++)
         {   
             Face face = faces[j];
-            Vec3f a = scene.vertex_data[face.v0_id - 1];
-            Vec3f b = scene.vertex_data[face.v1_id - 1];
-            Vec3f c = scene.vertex_data[face.v2_id - 1];
+            a = scene.vertex_data[face.v0_id - 1];
+            b = scene.vertex_data[face.v1_id - 1];
+            c = scene.vertex_data[face.v2_id - 1];
             t = intersectFace(ray, face,a,b,c);
             if (t > 0 && t < t_min)
             {
@@ -390,6 +407,8 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
     Sphere currSphere ;
     Vec3f w_o, n , center;
     Material currMat;
+    // Variables in loops
+    
  
     switch (closestObjType)
     {
@@ -409,7 +428,11 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                 // Intersect with all spheres in the scene
                 for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                 {
-                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    Sphere s = scene.spheres[sphereIndex];
+                    centerSend = scene.vertex_data[s.center_vertex_id - 1];
+                    oMinusC = shadowRay.origin - centerSend;
+                    t = intersectSphere(shadowRay,s,centerSend,oMinusC );
+            
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
@@ -421,8 +444,12 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
 
                 // Intersect with all triangles in the scene
                 for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-                {
-                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                {   
+                    Triangle tri = scene.triangles[triIndex];
+                    a = scene.vertex_data[tri.indices.v0_id - 1];
+                    b = scene.vertex_data[tri.indices.v1_id - 1];
+                    c = scene.vertex_data[tri.indices.v2_id - 1];
+                    t = intersectTriangle(shadowRay, tri,a,b,c);
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
@@ -470,7 +497,10 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                 // Intersect with all spheres in the scene
                 for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                 {
-                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    Sphere s = scene.spheres[sphereIndex];
+                    centerSend = scene.vertex_data[s.center_vertex_id - 1];
+                    oMinusC = shadowRay.origin - centerSend;
+                    t = intersectSphere(shadowRay,s,centerSend,oMinusC );
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
@@ -482,8 +512,12 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
 
                 // Intersect with all triangles in the scene
                 for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
-                {
-                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                {   
+                    Triangle tri = scene.triangles[triIndex];
+                    a = scene.vertex_data[tri.indices.v0_id - 1];
+                    b = scene.vertex_data[tri.indices.v1_id - 1];
+                    c = scene.vertex_data[tri.indices.v2_id - 1];
+                    t = intersectTriangle(shadowRay, tri ,a,b,c);
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
@@ -528,7 +562,11 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                 // Intersect with all spheres in the scene
                 for (int sphereIndex = 0; sphereIndex < numOfSpheres; sphereIndex++)
                 {
-                    t = intersectSphere(shadowRay, scene.spheres[sphereIndex]);
+                    Sphere s = scene.spheres[sphereIndex];
+                    centerSend = scene.vertex_data[s.center_vertex_id - 1];
+                    oMinusC = shadowRay.origin - centerSend;
+                    t = intersectSphere(shadowRay,s,centerSend,oMinusC );
+
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
@@ -541,7 +579,11 @@ Vec3f calculateColor(Ray ray, int recursionDepth,Camera currCam)
                 // Intersect with all triangles in the scene
                 for (int triIndex = 0; triIndex < numOfTriangles; triIndex++)
                 {
-                    t = intersectTriangle(shadowRay, scene.triangles[triIndex]);
+                    Triangle tri = scene.triangles[triIndex];
+                    a = scene.vertex_data[tri.indices.v0_id - 1];
+                    b = scene.vertex_data[tri.indices.v1_id - 1];
+                    c = scene.vertex_data[tri.indices.v2_id - 1];
+                    t = intersectTriangle(shadowRay, tri ,a,b,c);
                     if (t > 0 && t < tLight)
                     {
                         // found one obj that intersects before the light source. quit
