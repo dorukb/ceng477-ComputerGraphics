@@ -16,6 +16,7 @@
 #include "Vec3.h"
 #include "tinyxml2.h"
 #include "Helpers.h"
+#include "Matrix4.h"
 
 using namespace tinyxml2;
 using namespace std;
@@ -27,8 +28,82 @@ using namespace std;
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
 	// TODO: Implement this function.
+
+	// After this call, all Meshes have their Model matrix field(.modelM) assigned.
+	this->calculateModelingTransformations();
+
+	// Viewing Transformations
+	Matrix4 Mcam;
+	Mcam  = Mcam.GetMcam(camera);
+
+	// 1 for perspective, 0 for orthographic
+	Matrix4 Mproj;
+	if(camera->projectionType == 0){
+		Mproj = Mproj.GetMortho(camera);
+	}
+	else if(camera->projectionType == 1)
+	{
+		Mproj = Mproj.GetMpers(camera);
+	}
+	Matrix4 Mvp;
+	Mvp = Mvp.GetMvp(camera);
+	// remember to do Perspective divide if mode is perspective!
+
+	// Do: Trans'edVertex = Mvp * PersDiv * Mper * Mcam * Mmodel * Vertex
+	// for each vertex of a mesh. remember, Mmodel is specific to a Mesh, while others are generic.
+
 }
 
+void Scene::calculateModelingTransformations()
+{
+	for(int i = 0; i < meshes.size(); i++)
+	{
+		Mesh *m = meshes[i];
+		m->modelM = getIdentityMatrix();
+
+		for(int j = 0; j < m -> numberOfTransformations; j++)
+		{
+			// ids start from 1, again :/
+			int tIndex = m->transformationIds[j] -1;
+
+			char type = m->transformationTypes[j];
+			cout << "index of transformation: " << tIndex << " type: " << type << endl;
+
+			if(type == 't')
+			{
+				// do translation transformation
+				Translation *trans = this->translations[tIndex];
+				Matrix4 transMatrix(trans);
+
+				// Accumulate the transformation.
+				m->modelM  = multiplyMatrixWithMatrix(transMatrix, m->modelM);
+
+			}
+			else if(type == 's')
+			{
+				// do scaling transformation
+				Scaling *scaling = this->scalings[tIndex];
+				Matrix4 scalingMatrix(scaling);
+
+				// Accumulate the transformation.
+				m->modelM  = multiplyMatrixWithMatrix(scalingMatrix, m->modelM);
+
+			}
+			else if(type == 'r')
+			{
+				// do rotation transformation
+				Rotation *rot = this->rotations[tIndex];
+				Matrix4 rotationMatrix;
+				rotationMatrix = rotationMatrix.GetRotationMatrix(rot);
+
+				// Accumulate the transformation.
+				m->modelM  = multiplyMatrixWithMatrix(rotationMatrix, m->modelM);
+			}
+		}
+
+	}
+	// at this point, each mesh has the final modelling matrix info in their "mesh->modelM" field.
+}
 /*
 	Parses XML file
 */

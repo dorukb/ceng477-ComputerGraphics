@@ -4,6 +4,7 @@
 #include <vector>
 #include "Triangle.h"
 #include <iostream>
+#include "Matrix4.h"
 
 using namespace std;
 
@@ -18,6 +19,9 @@ public:
     vector<char> transformationTypes;
     int numberOfTriangles;
     vector<Triangle> triangles;
+
+    // custom fields
+    Matrix4 modelM;
 
     Mesh();
     Mesh(int meshId, int type, int numberOfTransformations,
