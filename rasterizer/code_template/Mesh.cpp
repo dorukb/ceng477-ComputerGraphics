@@ -3,8 +3,10 @@
 #include "Mesh.h"
 #include <iostream>
 #include <iomanip>
+#include <map>
 
 using namespace std;
+
 
 Mesh::Mesh() {}
 
@@ -21,7 +23,7 @@ Mesh::Mesh(int meshId, int type, int numberOfTransformations,
 
     this->transformationIds = transformationIds;
     this->transformationTypes = transformationTypes;
-    this->triangles = triangles;
+    this->triangles = triangles; 
 }
 
 ostream &operator<<(ostream &os, const Mesh &m)

@@ -52,6 +52,132 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// Do: Trans'edVertex = Mvp * PersDiv * Mper * Mcam * Mmodel * Vertex
 	// for each vertex of a mesh. remember, Mmodel is specific to a Mesh, while others are generic.
 
+	int meshCount = meshes.size();
+	for(int i=0; i < meshCount; i++)
+	{
+		Mesh *mesh = meshes[i];
+
+		Matrix4 McamMmodel = multiplyMatrixWithMatrix(Mcam,mesh->modelM);
+		Matrix4 MprojMcamMmodel = multiplyMatrixWithMatrix(Mproj, McamMmodel);
+		// only M_vp mulp is left, do that after perspective divide if cam is perspective.
+
+		for(auto tri : mesh->triangles)
+		{
+			if(mesh->type ==0) // Wireframe mode
+			{
+				Vec3 *v1data = vertices[tri.getFirstVertexId()-1];
+				Vec3 *v2data = vertices[tri.getSecondVertexId()-1];
+				Vec3 *v3data = vertices[tri.getThirdVertexId()-1];
+
+				// do also BFC here??
+				// calculate normal
+				Vec3 ab,ac,n;
+				ab = subtractVec3(*v2data , *v1data);
+				ac = subtractVec3(*v3data , *v1data);
+				n = crossProductVec3(ab,ac);
+				n = normalizeVec3(n);
+
+				// Adds w component, convert to homogenous coords.
+				Vec4 v1(v1data);
+				Vec4 v2(v2data);
+				Vec4 v3(v3data);
+
+				// apply the transformation
+				v1 = multiplyMatrixWithVec4(MprojMcamMmodel, v1);
+				v2 = multiplyMatrixWithVec4(MprojMcamMmodel, v2);
+				v3 = multiplyMatrixWithVec4(MprojMcamMmodel, v3);
+				Mesh::Line line1(&v1, &v2); // formed by: v1 and v2
+				Mesh::Line line2(&v1, &v3); // formed by: v1 and v3
+				Mesh::Line line3(&v2, &v3); // formed by: v2 and v3
+
+				//do clipping test for each line, then add to lines list of our mesh.
+				clipAndAddToLinesList(&line1, mesh, camera, Mvp);
+				clipAndAddToLinesList(&line2, mesh, camera, Mvp);
+				clipAndAddToLinesList(&line3, mesh, camera, Mvp);
+
+				// bool clipped = clippingTest(&line1);
+				// if(!clipped){
+
+				// 	if(camera->projectionType == 1){
+				// 		// perspective cam, do perspective divide
+				// 		line1.v1.x /= line1.v1.t;
+				// 		line1.v1.y /= line1.v1.t;
+				// 		line1.v1.z /= line1.v1.t;
+				// 		line1.v1.t = 1.0;
+
+				// 		line1.v2.x /= line1.v2.t;
+				// 		line1.v2.y /= line1.v2.t;
+				// 		line1.v2.z /= line1.v2.t;
+				// 		line1.v2.t = 1.0;
+				// 	}
+				// 	// complete transformations by multiplying with M_viewport
+				// 	line1.v1 = multiplyMatrixWithVec4(Mvp, line1.v1);
+				// 	line1.v2 = multiplyMatrixWithVec4(Mvp, line1.v2);
+				// 	mesh->lines.push_back(line1);
+				// }
+
+				// clipped = clippingTest(&line2);
+				// if(!clipped){
+				// 	// complete transformations by multiplying with M_viewport
+				// 	line2.v1 = multiplyMatrixWithVec4(Mvp, line2.v1);
+				// 	line2.v2 = multiplyMatrixWithVec4(Mvp, line2.v2);
+				// 	mesh->lines.push_back(line2);
+				// }
+
+				// clipped = clippingTest(&line3);
+				// if(!clipped){
+				// 	// complete transformations by multiplying with M_viewport
+				// 	line3.v1 = multiplyMatrixWithVec4(Mvp, line3.v1);
+				// 	line3.v2 = multiplyMatrixWithVec4(Mvp, line3.v2);
+				// 	mesh->lines.push_back(line3);
+				// }
+			}
+
+			else // solid mode
+			{
+				// perform BFC first?
+
+				// transform all vertices, no need to form lines. keep the same triangle structure.
+				// just copy vertex data.
+				for(int j=0; j < 4; j++)
+				{
+					int ind = tri.vertexIds[j];
+					Vec3* data = vertices[ind-1];
+					Vec4 vert;
+					vert.x = data->x;
+					vert.y = data->y;
+					vert.z = data->z;
+					vert.t = 1.0; // homogenous w coord.
+					vert.colorId = data->colorId;
+					
+					Vec4 transedVert = multiplyMatrixWithVec4(MprojMcamMmodel, vert);
+
+					if(camera->projectionType == 1){
+						// perspective cam, do perspective divide
+						transedVert.x /= transedVert.t;
+						transedVert.y /= transedVert.t;
+						transedVert.z /= transedVert.t;
+						transedVert.t = 1.0;
+					}
+
+					// complete transformations by multiplying with M_viewport
+					Vec4 finalVert = multiplyMatrixWithVec4(Mvp, transedVert);
+
+					// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
+					mesh->vertexDataCopy.push_back(finalVert);
+
+					// but we will drop entire triangles, vertices during clipping? the list will get broken...
+					// need to delete the copies of deleted vertices aswell. vector will "move them down" to correct positions after erase...
+					// vec.erase( vec.begin() + 3 ); exp code to use for deletion.
+				}
+			
+			}
+
+			// do BFC
+			// add to list if visible.
+
+		}
+	}
 }
 
 void Scene::calculateModelingTransformations()
@@ -103,6 +229,223 @@ void Scene::calculateModelingTransformations()
 
 	}
 	// at this point, each mesh has the final modelling matrix info in their "mesh->modelM" field.
+
+
+}
+
+bool isVisible(double den, double num, double *te, double *tl)
+{
+	double t;
+	if(den > 0)
+	{ // potentially entering
+		t = num / den;
+		if(t > *tl)
+		{
+			return false;
+		}
+		if(t > *te){
+			*te = t;
+		}
+	}
+	else if(den < 0)
+	{ // potentially leaving
+		t = num/den;
+		if(t < *te){
+			return false;
+		}
+		if(t < *tl){
+			*tl = t;
+		}
+	}
+	else if(num > 0)
+	{ // line parallel to edge
+		return false;
+	}
+	return true;	
+}
+
+void Scene::clipAndAddToLinesList(Mesh::Line *line, Mesh *mesh, Camera *camera, Matrix4 &Mvp)
+{
+	bool clipped = clippingTest(line);
+	if(!clipped)
+	{
+		if(camera->projectionType == 1){
+			// perspective cam, do perspective divide
+			line->v1.x /= line->v1.t;
+			line->v1.y /= line->v1.t;
+			line->v1.z /= line->v1.t;
+			line->v1.t = 1.0;
+
+			line->v2.x /= line->v2.t;
+			line->v2.y /= line->v2.t;
+			line->v2.z /= line->v2.t;
+			line->v2.t = 1.0;
+		}
+		// complete transformations by multiplying with M_viewport
+		line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
+		line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
+		mesh->lines.push_back(*line);
+	}
+}
+bool Scene::clippingTest(Mesh::Line *line)
+{
+	double dx,dy,dz;
+	double xmin,xmax,ymin,ymax,zmin,zmax;
+
+	dx = line->v1.x - line->v2.x;
+	dy = line->v1.y - line->v2.y;
+	dz = line->v1.z - line->v2.z;
+
+	
+	if(ABS(line->v1.t) > ABS(line->v2.t)){
+		xmax = ABS(line->v1.t);
+	}
+	else{
+		xmax = ABS(line->v2.t);
+	}
+	ymax = zmax = xmax;
+
+	if(-ABS(line->v1.t) < -ABS(line->v2.t)){
+		xmin = -ABS(line->v1.t);
+	}
+	else{
+		xmin = -ABS(line->v2.t);
+	}
+	ymin = zmin = xmin;
+
+	// double* te = new double(0);
+	// double* tl = new double(1);
+	double te = 0;
+	double tl = 1;
+	bool visible = false;
+
+	double x0 = line->v1.x;
+	double y0 = line->v1.y;
+	double z0 = line->v1.z;
+
+	Vec4 newV1(line->v1);
+	Vec4 newV2(line->v2);
+	if(isVisible(dx, xmin - x0, &te, &tl)){
+		if(isVisible(-dx, x0 - xmax, &te, &tl)){
+			if(isVisible(dy, ymin - y0, &te, &tl)){
+				if(isVisible(-dy, y0-ymax, &te, &tl)){
+					if(isVisible(dz, zmin-z0, &te, &tl)){
+						if(isVisible(-dz, z0-zmax, &te, &tl)){
+							visible = true;
+							// get clipped vertex data
+							if(tl < 1){
+								newV2.x = x0 + dx*tl;
+								newV2.y = y0 + dy*tl;
+								newV2.z = z0 + dz*tl;
+							}
+							if(te > 0){
+								newV1.x = x0 + dx*te;
+								newV1.y = y0 + dy*te;
+								newV1.z = z0 + dz*te;
+							}
+							// update the line.
+							line->v1 = newV1;
+							line->v2 = newV2;
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+	return visible;
+}
+
+
+void Scene::draw(int x,int y,Color* c){
+    std::cout<<x<<" " <<y<<" "<<c->r<<endl;
+
+    if(x>=cameras[0]->horRes|| x>=cameras[0]->verRes || x<=0)
+        return;
+    if(y>=cameras[0]->horRes|| y>=cameras[0]->verRes||y<=0)
+        return;
+
+
+    image[x][y].r=round(c->r);
+    image[x][y].b=round(c->b);
+    image[x][y].g =round(c->g) ;
+
+
+}
+
+
+
+double Scene ::f01(double x,double y,double x0,double x1,double y0,double y1){
+    return x*(y0-y1)+y*(x1-x0)+x0*y1-y0*x1;
+}
+double Scene ::f12(double x,double y,double x1,double x2,double y1,double y2){
+    return x*(y1-y2)+y*(x2-x1)+x1*y2-y1*x2;
+}
+double Scene ::f20(double x,double y,double x2,double x0,double y2,double y0){
+    return x*(y2-y0)+y*(x0-x2)+x2*y0-y2*x0;
+}
+
+void Scene::rasterization(Mesh* object){
+
+    if (object->type!=1){
+        double alpha,beta,gama;
+        Color *c;
+        Color *c_0;
+        Color *c_1;
+        Color *c_2;
+        int numberOfTriangles = object->numberOfTriangles;
+        std::cout<<"numberOfTriangles"<<numberOfTriangles<<endl;
+        for (int i = 0 ;i<numberOfTriangles;i++){
+
+            int v0_id = object->triangles[i].getFirstVertexId() -1;
+            int v1_id = object->triangles[i].getSecondVertexId() -1;
+            int v2_id = object->triangles[i].getThirdVertexId() -1;
+
+            int c0_id = (vertices[v0_id]->colorId)-1;
+            int c1_id = (vertices[v1_id]->colorId)-1;
+            int c2_id = (vertices[v2_id]->colorId)-1;
+
+            double x_0 = vertices[v0_id]->x;
+            double y_0 = vertices[v0_id]->y;
+            c_0 = colorsOfVertices[c0_id];
+
+            double x_1 = vertices[v1_id]->x;
+            double y_1 = vertices[v1_id]->y;
+            c_1 = colorsOfVertices[c1_id];
+
+            double x_2 = vertices[v2_id]->x;
+            double y_2 = vertices[v2_id]->y;
+            c_2 = colorsOfVertices[c2_id];
+
+            double y_min = min(y_0,min(y_1,y_2));
+            double x_min = min(x_0,min(x_1,x_2));
+            double y_max = max(y_0,max(y_1,y_2));
+            double x_max = max(x_0,max(x_1,x_2));
+
+            for(int y=y_min;y<y_max;y++){
+                for(int x=x_min;x<x_max;x++){
+                    alpha = f12(x,y,x_1,x_2,y_1,y_2)/f12(x_0,y_0,x_1,x_2,y_1,y_2);
+                    beta = f20(x,y,x_2,x_0,y_2,y_0)/f20(x_1,y_1,x_2,x_0,y_2,y_0);
+                    gama = f01(x,y,x_0,x_1,y_0,y_1)/f01(x_2,y_2,x_0,x_1,y_0,y_1);
+                    std::cout<<"triangle2 :"<<i<<endl;
+                    if (alpha>=0 && beta>=0 && gama>=0 && i< 4 ){
+                        c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
+
+                        draw(x,y,c);
+
+
+
+                    }
+
+
+                }
+            }
+
+
+        }
+    }
+
 }
 /*
 	Parses XML file
@@ -319,6 +662,16 @@ Scene::Scene(const char *xmlPath)
 		{
 			int result = sscanf(row, "%d %d %d", &v1, &v2, &v3);
 			
+			// vertices[v1-1]->refCount++;
+			// if(vertices[v1-1]->refCount>1){
+			// 	// shared vertice? what if its us? using this in more than one triangle??? FUCK
+			// }
+			// // increase ref count for v1,v2,v3. if ref count > 1, then add to shared vertices.
+			// auto it = this->vertexRefCounts.find(v1);
+			// if(it != vertexRefCounts.end()){
+			// 	// found it, so shared.
+			// 	this->sharedVertexIndices.push_back()
+			// }
 			if (result != EOF) {
 				mesh->triangles.push_back(Triangle(v1, v2, v3));
 			}

@@ -126,6 +126,7 @@ Matrix4 Matrix4::GetMpers(Camera *cam)
     Mpers.val[2][3] = (twon*cam->far) / (cam->far-cam->near);
 
     Mpers.val[3][2] = -1.0;
+    return Mpers;
 }    
 Matrix4 Matrix4::GetMvp(Camera *cam)
 {
@@ -138,6 +139,7 @@ Matrix4 Matrix4::GetMvp(Camera *cam)
 
     Mvp.val[2][2] = 0.5;
     Mvp.val[2][3] = 0.5;
+    return Mvp;
 }
 
 Matrix4 Matrix4::GetMortho(Camera *cam)
@@ -153,6 +155,7 @@ Matrix4 Matrix4::GetMortho(Camera *cam)
     Mortho.val[2][3] = (-cam->far -cam->near) / (cam->far - cam->near);
 
     Mortho.val[3][3] = 1;
+    return Mortho;
 }
    
 Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)

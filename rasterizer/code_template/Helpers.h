@@ -7,7 +7,7 @@
 #include "Matrix4.h"
 #include "Vec3.h"
 #include "Vec4.h"
-
+#include "Color.h"
 /*
  * Calculate cross product of vec3 a, vec3 b and return resulting vec3.
  */
@@ -73,5 +73,11 @@ Matrix4 multiplyMatrixWithMatrix(Matrix4 m1, Matrix4 m2);
  * Multiply matrix m (Matrix4) with vector v (vec4) and store the result in vector r (vec4).
  */
 Vec4 multiplyMatrixWithVec4(Matrix4 m, Vec4 v);
+
+
+Color* subColor(Color* C0,Color* C1);
+Color* addColor(Color* C0,Color* C1);
+Color* divColor(Color* C0,double x);
+Color* multColor(Color* C0,double x);
 
 #endif

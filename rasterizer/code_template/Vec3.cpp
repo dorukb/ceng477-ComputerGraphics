@@ -9,6 +9,7 @@ Vec3::Vec3()
     this->y = 0.0;
     this->z = 0.0;
     this->colorId = -1;
+    // this->refCount = 0;
 }
 
 Vec3::Vec3(double x, double y, double z, int colorId)
@@ -17,6 +18,8 @@ Vec3::Vec3(double x, double y, double z, int colorId)
     this->y = y;
     this->z = z;
     this->colorId = colorId;
+    // this->refCount = 0;
+
 }
 
 Vec3::Vec3(const Vec3 &other)
@@ -25,6 +28,8 @@ Vec3::Vec3(const Vec3 &other)
     this->y = other.y;
     this->z = other.z;
     this->colorId = other.colorId;
+    // this->refCount = 0;
+
 }
 
 double Vec3::getElementAt(int index)

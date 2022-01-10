@@ -202,3 +202,30 @@ Vec4 multiplyMatrixWithVec4(Matrix4 m, Vec4 v)
 
     return Vec4(values[0], values[1], values[2], values[3], v.colorId);
 }
+
+Color* subColor(Color* C0,Color* C1){
+    double r = C1->r-C0->r;
+    double g = C1->g-C0->g;
+    double b = C1->b-C0->b;
+    return new Color(r,g,b);
+}
+Color* addColor(Color* C0,Color* C1){
+    double r = C1->r+C0->r;
+    double g = C1->g+C0->g;
+    double b = C1->b+C0->b;
+    return new Color(r,g,b);
+}
+
+Color* divColor(Color* C0,double x){
+    double r = C0->r/x;
+    double g = C0->g/x;
+    double b = C0->b/x;
+    return new Color(r,g,b);
+}
+
+Color* multColor(Color* C0,double x){
+    double r = C0->r*x;
+    double g = C0->g*x;
+    double b = C0->b*x;
+    return new Color(r,g,b);
+}

@@ -17,6 +17,7 @@
 #include "Triangle.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <unordered_map>
 
 using namespace std;
 
@@ -35,6 +36,9 @@ public:
 	vector< Translation* > translations;
 	vector< Mesh* > meshes;
 
+	// std::unordered_map<int,int> vertexRefCounts;
+	// std::set<int> sharedVertexIndices;
+
 	Scene(const char *xmlPath);
 
 	void initializeImage(Camera* camera);
@@ -44,6 +48,17 @@ public:
 	void convertPPMToPNG(string ppmFileName, int osType);
 
 	void calculateModelingTransformations();
+	bool clippingTest(Mesh::Line *line);
+	void clipAndAddToLinesList(Mesh::Line *line, Mesh *mesh, Camera *camera, Matrix4 &Mvp);
+
+	
+	void draw(int x,int y,Color* c);
+    double f01(double x,double y,double x0,double x1,double y0,double y1);
+    double f12(double x,double y,double x1,double x2,double y1,double y2);
+    double f20(double x,double y,double x2,double x0,double y2,double y0);
+    void rasterization(Mesh* object);
+
+
 };
 
 #endif

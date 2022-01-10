@@ -9,6 +9,7 @@ class Vec3
 public:
     double x, y, z;
     int colorId;
+    // int refCount;
 
     Vec3();
     Vec3(double x, double y, double z, int colorId);
