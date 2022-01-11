@@ -25,16 +25,219 @@ using namespace std;
 	Transformations, clipping, culling, rasterization are done here.
 	You may define helper functions.
 */
+
+
+int tri = 0;
+void Scene::draw(int x,int y,Color* c){
+    //std::cout<<x<<" " <<y<<" "<<c->r<<endl;
+    x=x+5;
+    y=y+5;
+    if(x>=cameras[0]->horRes&& x>=cameras[0]->verRes && tri<3)
+        return;
+    if(y>=cameras[0]->horRes&&  y>=cameras[0]->verRes)
+        return;
+
+    if(x<0)
+        x=x*(-1);
+    if(y<0)
+        y=x*(-1);
+    x=x*20 ;
+    y=y*20;
+    tri++;
+
+
+    image[x][y].r=0;
+    image[x][y].b=0;
+    image[x][y].g =0;
+   /* image[x][y].r=round(c->r);
+    image[x][y].b=round(c->b);
+    image[x][y].g =round(c->g) ;*/
+
+
+}
+
+
+
+double Scene ::f01(double x,double y,double x0,double x1,double y0,double y1){
+    return x*(y0-y1)+y*(x1-x0)+x0*y1-y0*x1;
+}
+double Scene ::f12(double x,double y,double x1,double x2,double y1,double y2){
+    return x*(y1-y2)+y*(x2-x1)+x1*y2-y1*x2;
+}
+double Scene ::f20(double x,double y,double x2,double x0,double y2,double y0){
+    return x*(y2-y0)+y*(x0-x2)+x2*y0-y2*x0;
+}
+
+void Scene::midpoint_algorithm(double x_0,double y_0,Color* c_0,double x_1,double y_1,Color* c_1){
+    double m=(y_1-y_0)/(x_1-x_0);
+    if(0<m && m<=1){
+        cout<<m<<endl;
+        double y=y_0;
+        double d = 2*(y_1-y_0)+(x_1-x_0);
+        Color* c = c_0;
+        Color* dc = divColor(subColor(c_1,c_0),(x_1-x_0)) ;
+        for(int x = x_0; x<x_1;x++){
+            draw(x,y,c);
+            if(d<0){
+                y=y+1;
+                d+=2*((y_0-y_1)+(x_1-x_0));
+            }else{
+                d+=2*(y_0-y_1);
+            }
+            c=addColor(c,dc);
+        }
+    }
+
+    else if(m>1){
+        cout<<m<<endl;
+        //change x and y
+        double x=x_0;
+        double d = 2*(x_1-x_0)+(y_1-y_0);
+        Color* c = c_0;
+        Color* dc = divColor(subColor(c_1,c_0),(y_1-y_0)) ;
+        for(int y = y_0; y<y_1;y++){
+            draw(x,y,c);
+            if(d<0){
+                x=x+1;
+                d+=2*((x_0-x_1)+(y_1-y_0));
+            }else{
+                d+=2*(x_0-x_1);
+            }
+            c=addColor(c,dc);
+        }
+    }
+
+}
+
+
+void Scene::rasterization(Mesh* object){
+    //solid
+    if (object->type==1){
+        double alpha,beta,gama;
+        Color *c;
+        Color *c_0;
+        Color *c_1;
+        Color *c_2;
+        int numberOfTriangles = object->numberOfTriangles;
+
+        for (int i = 0 ;i<numberOfTriangles;i++){
+
+            int v0_id = object->triangles[i].getFirstVertexId() -1;
+            int v1_id = object->triangles[i].getSecondVertexId() -1;
+            int v2_id = object->triangles[i].getThirdVertexId() -1;
+
+            int c0_id = (vertices[v0_id]->colorId)-1;
+            int c1_id = (vertices[v1_id]->colorId)-1;
+            int c2_id = (vertices[v2_id]->colorId)-1;
+
+            double x_0 = vertices[v0_id]->x;
+            double y_0 = vertices[v0_id]->y;
+            c_0 = colorsOfVertices[c0_id];
+
+            double x_1 = vertices[v1_id]->x;
+            double y_1 = vertices[v1_id]->y;
+            c_1 = colorsOfVertices[c1_id];
+
+            double x_2 = vertices[v2_id]->x;
+            double y_2 = vertices[v2_id]->y;
+            c_2 = colorsOfVertices[c2_id];
+
+            double y_min = min(y_0,min(y_1,y_2));
+            double x_min = min(x_0,min(x_1,x_2));
+            double y_max = max(y_0,max(y_1,y_2));
+            double x_max = max(x_0,max(x_1,x_2));
+
+            for(int y=y_min;y<y_max;y++){
+                for(int x=x_min;x<x_max;x++){
+                    alpha = f12(x,y,x_1,x_2,y_1,y_2)/f12(x_0,y_0,x_1,x_2,y_1,y_2);
+                    beta = f20(x,y,x_2,x_0,y_2,y_0)/f20(x_1,y_1,x_2,x_0,y_2,y_0);
+                    gama = f01(x,y,x_0,x_1,y_0,y_1)/f01(x_2,y_2,x_0,x_1,y_0,y_1);
+
+                    if (alpha>=0 && beta>=0 && gama>=0 && i< 4 ){
+                        //c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
+
+                           // draw(x,y,c);
+
+                    }
+                    std::cout<<"triangle3 :"<<i<<endl;
+
+
+                }
+            }
+
+
+        }
+    }
+    else{
+        double alpha,beta,gama;
+        Color *c;
+        Color *c_0;
+        Color *c_1;
+        Color *c_2;
+        int numberOfTriangles = object->numberOfTriangles;
+        std::cout<<"numberOfTriangles: "<<numberOfTriangles<<endl;
+        for(int i=0;i<numberOfTriangles;i++){
+
+            double x_0 = object->vertexDataCopy[3*i].x;
+            double y_0 = object->vertexDataCopy[i].y;
+
+            int id0 = object->vertexDataCopy[3*i+2].colorId;
+            c_0 = colorsOfVertices[id0-1];
+
+            double x_1 = object->vertexDataCopy[3*i+1].x;
+            double y_1 = object->vertexDataCopy[3*i+1].y;
+            int id1 = object->vertexDataCopy[3*i+1].colorId;
+            c_1 = colorsOfVertices[id1-1];
+
+
+            double x_2 = object->vertexDataCopy[3*i+2].x;
+            double y_2 = object->vertexDataCopy[3*i+2].y;
+            int id2 = object->vertexDataCopy[3*i+2].colorId;
+            c_2= colorsOfVertices[id2-1];
+
+            /*
+            int v0_id = object->triangles[i].getFirstVertexId() -1;
+            int v1_id = object->triangles[i].getSecondVertexId() -1;
+            int v2_id = object->triangles[i].getThirdVertexId() -1;
+
+            int c0_id = (vertices[v0_id]->colorId)-1;
+            int c1_id = (vertices[v1_id]->colorId)-1;
+            int c2_id = (vertices[v2_id]->colorId)-1;
+
+            double x_0 = vertices[v0_id]->x;
+            double y_0 = vertices[v0_id]->y;
+            c_0 = colorsOfVertices[c0_id];
+
+            double x_1 = vertices[v1_id]->x;
+            double y_1 = vertices[v1_id]->y;
+            c_1 = colorsOfVertices[c1_id];
+
+            double x_2 = vertices[v2_id]->x;
+            double y_2 = vertices[v2_id]->y;
+            c_2 = colorsOfVertices[c2_id];*/
+
+            cout<<"x_0:"<<x_0<<",y_0:"<<y_1<<"x_1:"<<x_1<<",y_1:"<<y_1<<"x_2:"<<x_2<<",y_2:"<<y_2<<endl;
+
+            //draw for 0->1 1->2 2->0
+            midpoint_algorithm(x_0,y_0,c_0,x_1,y_1,c_1);
+            midpoint_algorithm(x_1,y_1,c_1,x_2,y_2,c_2);
+            midpoint_algorithm(x_2,y_2,c_2,x_0,y_0,c_0);
+
+        }
+    }
+}
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
 	// TODO: Implement this function.
 
 	// After this call, all Meshes have their Model matrix field(.modelM) assigned.
+
 	this->calculateModelingTransformations();
 
 	// Viewing Transformations
 	Matrix4 Mcam;
 	Mcam  = Mcam.GetMcam(camera);
+
 
 	// 1 for perspective, 0 for orthographic
 	Matrix4 Mproj;
@@ -166,6 +369,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 					// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
 					mesh->vertexDataCopy.push_back(finalVert);
 
+
 					// but we will drop entire triangles, vertices during clipping? the list will get broken...
 					// need to delete the copies of deleted vertices aswell. vector will "move them down" to correct positions after erase...
 					// vec.erase( vec.begin() + 3 ); exp code to use for deletion.
@@ -178,6 +382,8 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 		}
 	}
+
+    rasterization(meshes[0]);
 }
 
 void Scene::calculateModelingTransformations()
@@ -358,95 +564,6 @@ bool Scene::clippingTest(Mesh::Line *line)
 }
 
 
-void Scene::draw(int x,int y,Color* c){
-    std::cout<<x<<" " <<y<<" "<<c->r<<endl;
-
-    if(x>=cameras[0]->horRes|| x>=cameras[0]->verRes || x<=0)
-        return;
-    if(y>=cameras[0]->horRes|| y>=cameras[0]->verRes||y<=0)
-        return;
-
-
-    image[x][y].r=round(c->r);
-    image[x][y].b=round(c->b);
-    image[x][y].g =round(c->g) ;
-
-
-}
-
-
-
-double Scene ::f01(double x,double y,double x0,double x1,double y0,double y1){
-    return x*(y0-y1)+y*(x1-x0)+x0*y1-y0*x1;
-}
-double Scene ::f12(double x,double y,double x1,double x2,double y1,double y2){
-    return x*(y1-y2)+y*(x2-x1)+x1*y2-y1*x2;
-}
-double Scene ::f20(double x,double y,double x2,double x0,double y2,double y0){
-    return x*(y2-y0)+y*(x0-x2)+x2*y0-y2*x0;
-}
-
-void Scene::rasterization(Mesh* object){
-
-    if (object->type!=1){
-        double alpha,beta,gama;
-        Color *c;
-        Color *c_0;
-        Color *c_1;
-        Color *c_2;
-        int numberOfTriangles = object->numberOfTriangles;
-        std::cout<<"numberOfTriangles"<<numberOfTriangles<<endl;
-        for (int i = 0 ;i<numberOfTriangles;i++){
-
-            int v0_id = object->triangles[i].getFirstVertexId() -1;
-            int v1_id = object->triangles[i].getSecondVertexId() -1;
-            int v2_id = object->triangles[i].getThirdVertexId() -1;
-
-            int c0_id = (vertices[v0_id]->colorId)-1;
-            int c1_id = (vertices[v1_id]->colorId)-1;
-            int c2_id = (vertices[v2_id]->colorId)-1;
-
-            double x_0 = vertices[v0_id]->x;
-            double y_0 = vertices[v0_id]->y;
-            c_0 = colorsOfVertices[c0_id];
-
-            double x_1 = vertices[v1_id]->x;
-            double y_1 = vertices[v1_id]->y;
-            c_1 = colorsOfVertices[c1_id];
-
-            double x_2 = vertices[v2_id]->x;
-            double y_2 = vertices[v2_id]->y;
-            c_2 = colorsOfVertices[c2_id];
-
-            double y_min = min(y_0,min(y_1,y_2));
-            double x_min = min(x_0,min(x_1,x_2));
-            double y_max = max(y_0,max(y_1,y_2));
-            double x_max = max(x_0,max(x_1,x_2));
-
-            for(int y=y_min;y<y_max;y++){
-                for(int x=x_min;x<x_max;x++){
-                    alpha = f12(x,y,x_1,x_2,y_1,y_2)/f12(x_0,y_0,x_1,x_2,y_1,y_2);
-                    beta = f20(x,y,x_2,x_0,y_2,y_0)/f20(x_1,y_1,x_2,x_0,y_2,y_0);
-                    gama = f01(x,y,x_0,x_1,y_0,y_1)/f01(x_2,y_2,x_0,x_1,y_0,y_1);
-                    std::cout<<"triangle2 :"<<i<<endl;
-                    if (alpha>=0 && beta>=0 && gama>=0 && i< 4 ){
-                        c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
-
-                        draw(x,y,c);
-
-
-
-                    }
-
-
-                }
-            }
-
-
-        }
-    }
-
-}
 /*
 	Parses XML file
 */

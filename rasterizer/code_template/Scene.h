@@ -57,7 +57,7 @@ public:
     double f12(double x,double y,double x1,double x2,double y1,double y2);
     double f20(double x,double y,double x2,double x0,double y2,double y0);
     void rasterization(Mesh* object);
-
+    void midpoint_algorithm(double x_0,double y_0,Color* c_0,double x_1,double y_1,Color* c_1);
 
 };
 
