@@ -26,205 +26,341 @@ using namespace std;
 	You may define helper functions.
 */
 
+void Scene::draw(int x, int y, Color *c, Camera *cam)
+{
+	if (x < 0 || y < 0)
+	{
+		return;
+	}
+	if (x >= cam->horRes || y >= cam->verRes)
+		return;
 
-int tri = 0;
-void Scene::draw(int x,int y,Color* c){
-    //std::cout<<x<<" " <<y<<" "<<c->r<<endl;
-    x=x+5;
-    y=y+5;
-    if(x>=cameras[0]->horRes&& x>=cameras[0]->verRes && tri<3)
-        return;
-    if(y>=cameras[0]->horRes&&  y>=cameras[0]->verRes)
-        return;
-
-    if(x<0)
-        x=x*(-1);
-    if(y<0)
-        y=x*(-1);
-    x=x*20 ;
-    y=y*20;
-    tri++;
-
-
-    image[x][y].r=0;
-    image[x][y].b=0;
-    image[x][y].g =0;
-   /* image[x][y].r=round(c->r);
-    image[x][y].b=round(c->b);
-    image[x][y].g =round(c->g) ;*/
-
-
+	image[x][y].r = 0;
+	image[x][y].b = 0;
+	image[x][y].g = 0;
+	// image[x][y].r=round(c->r);
+    // image[x][y].b=round(c->b);
+    // image[x][y].g =round(c->g);
 }
 
-
-
-double Scene ::f01(double x,double y,double x0,double x1,double y0,double y1){
-    return x*(y0-y1)+y*(x1-x0)+x0*y1-y0*x1;
+double Scene ::f01(double x, double y, double x0, double x1, double y0, double y1)
+{
+	return x * (y0 - y1) + y * (x1 - x0) + x0 * y1 - y0 * x1;
 }
-double Scene ::f12(double x,double y,double x1,double x2,double y1,double y2){
-    return x*(y1-y2)+y*(x2-x1)+x1*y2-y1*x2;
+double Scene ::f12(double x, double y, double x1, double x2, double y1, double y2)
+{
+	return x * (y1 - y2) + y * (x2 - x1) + x1 * y2 - y1 * x2;
 }
-double Scene ::f20(double x,double y,double x2,double x0,double y2,double y0){
-    return x*(y2-y0)+y*(x0-x2)+x2*y0-y2*x0;
+double Scene ::f20(double x, double y, double x2, double x0, double y2, double y0)
+{
+	return x * (y2 - y0) + y * (x0 - x2) + x2 * y0 - y2 * x0;
 }
 
-void Scene::midpoint_algorithm(double x_0,double y_0,Color* c_0,double x_1,double y_1,Color* c_1){
-    double m=(y_1-y_0)/(x_1-x_0);
-    if(0<m && m<=1){
+void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, double y_1, Color c_1, Camera *camera)
+{
+	double m = (y_1 - y_0) / (x_1 - x_0);
+	int x, y, d;
+	double alpha = ABS(x_1 - x_0);
+
+	x = min(x_0, x_1);
+	y = min(y_0, y_1);
+
+	int testx = max(x_0, x_1);
+	int testy = max(y_0, y_1);
+	if (x < 0 || y < 0 || testx >= camera->horRes || testy >= camera->verRes)
+	{
+		return;
+	}
+
+	cout <<"BEFORE IMAGE" << "maxx: " << testx << " maxY: " << testy << " xmin: "<< x << " ymin: "<<y <<" m: " <<m<<endl;
+	// if (0.0 < m && m < 1.0)
+	// {
+	// 	x = min(x_0, x_1);
+	// 	y = min(y_0, y_1);
+
+	// 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
+
+	// 	for (; x < max(x_0, x_1); x++)
+	// 	{
+	// 		draw(x,y,0, camera);
+	// 		// image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
+	// 		// image[x][y].g = 0; // (double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
+	// 		// image[x][y].b = 0; // (double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
+	// 		if (d <= 0)
+	// 		{ //choose E
+	// 			d += 2 * abs(y_1 - y_0);
+	// 		}
+	// 		else
+	// 		{ //choose NE
+	// 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
+	// 			y++;
+	// 			if(y >= 700)break;
+	// 		}
+	// 	}
+	// }
+	// else if (1.0 <= m)
+	// {
+	// 	x = min(x_0, x_1);
+	// 	y = min(y_0, y_1);
+	// 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
+
+	// 	for (; y < max(y_0, y_1); y++)
+	// 	{			
+	// 		// draw(x,y,0, camera);
+
+	// 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
+	// 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
+	// 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
+	// 		if (d <= 0)
+	// 		{ //choose N
+	// 			d += 2 * abs(x_1 - x_0);
+	// 		}
+	// 		else
+	// 		{ //choose NE
+	// 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
+	// 			x++;
+	// 			if(x>=700)break;
+	// 		}
+	// 	}
+	// }
+	// else if (m <= 0 && m >= -1.0)
+	// {
+	// 	x = min(x_0, x_1);
+	// 	y = max(y_0, y_1);
+
+	// 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
+	// 	for (; x < max(x_0, x_1); x++)
+	// 	{
+	// 		image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
+	// 		image[x][y].g = 0; //(double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
+	// 		image[x][y].b = 0; //(double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
+	// 		if (d <= 0)
+	// 		{ //choose W
+	// 			d += 2 * abs(y_1 - y_0);
+	// 		}
+	// 		else
+	// 		{ //choose NW
+	// 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
+	// 			y--;
+	// 			if(y<0)break;
+	// 		}
+	// 	}
+	// }
+	// else if (-1.0 > m)
+	// {
+	// 	x = max(x_0, x_1);
+	// 	y = min(y_0, y_1);
+	// 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
+	// 	for (; y < max(y_0, y_1); y++)
+	// 	{
+	// 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
+	// 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
+	// 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
+	// 		if (d <= 0)
+	// 		{ //choose N
+	// 			d += 2 * abs(x_1 - x_0);
+	// 		}
+	// 		else
+	// 		{ // choose NW
+	// 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
+	// 			x--;
+
+	// 			if(x < 0){
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+	// }
+	if(0<m && m<=1){
+	    cout<<m<<endl;
+	    double y=y_0;
+	    double d = 2*(y_1-y_0)+(x_1-x_0);
+	    Color* c = &c_0;
+	    Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+	    for(int x = x_0; x<x_1;x++){
+	        draw(x,y,c, camera);
+	        if(d<0){
+	            y=y+1;
+				if(y >= camera->verRes){
+					break;
+				}
+	            d+=2*((y_0-y_1)+(x_1-x_0));
+	        }else{
+	            d+=2*(y_0-y_1);
+	        }
+	        c=addColor(c,dc);
+	    }
+	}
+	else if(m>1){
+	    cout<<m<<endl;
+	    //change x and y
+	    double x=x_0;
+	    double d = 2*(x_1-x_0)+(y_1-y_0);
+	    Color* c = &c_0;
+	    Color* dc = divColor(subColor(&c_1,&c_0),(y_1-y_0)) ;
+	    for(int y = y_0; y<y_1;y++){
+	        draw(x,y,c, camera);
+	        if(d<0){
+	            x=x+1;
+				if(x >= camera->horRes){
+					break;
+				}
+	            d+=2*((x_0-x_1)+(y_1-y_0));
+	        }else{
+	            d+=2*(x_0-x_1);
+	        }
+	        c=addColor(c,dc);
+	    }
+	}
+	else if(-1<=m && m<0){
         cout<<m<<endl;
-        double y=y_0;
-        double d = 2*(y_1-y_0)+(x_1-x_0);
-        Color* c = c_0;
-        Color* dc = divColor(subColor(c_1,c_0),(x_1-x_0)) ;
-        for(int x = x_0; x<x_1;x++){
-            draw(x,y,c);
+        double y=y_1;
+        double d = 2*abs(y_1-y_0)+abs(x_1-x_0);
+        Color* c = &c_0;
+        Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+
+        for(int x = x_1; x<x_0;x++){
+            draw(x,y,c, camera);
             if(d<0){
-                y=y+1;
-                d+=2*((y_0-y_1)+(x_1-x_0));
+                y=y-1;
+				if(y < 0)break;
+
+                d+=2*(abs(y_0-y_1)+abs(x_1-x_0));
             }else{
-                d+=2*(y_0-y_1);
+                d+=2*abs(y_0-y_1);
             }
             c=addColor(c,dc);
         }
     }
+	else if (-1.0 > m)
+	{
+		x = max(x_0, x_1);
+		y = min(y_0, y_1);
+		d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
+		for (; y < max(y_0, y_1); y++)
+		{
+			image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
+			image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
+			image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
+			if (d <= 0)
+			{ //choose N
+				d += 2 * abs(x_1 - x_0);
+			}
+			else
+			{ // choose NW
+				d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
+				x--;
 
-    else if(m>1){
-        cout<<m<<endl;
-        //change x and y
-        double x=x_0;
-        double d = 2*(x_1-x_0)+(y_1-y_0);
-        Color* c = c_0;
-        Color* dc = divColor(subColor(c_1,c_0),(y_1-y_0)) ;
-        for(int y = y_0; y<y_1;y++){
-            draw(x,y,c);
-            if(d<0){
-                x=x+1;
-                d+=2*((x_0-x_1)+(y_1-y_0));
-            }else{
-                d+=2*(x_0-x_1);
-            }
-            c=addColor(c,dc);
-        }
-    }
-
+				if(x < 0){
+					break;
+				}
+			}
+		}
+	}
 }
 
+void Scene::rasterization(Mesh *object, Camera *camera)
+{
+	//solid
+	if (object->type == 1)
+	{
+		double alpha, beta, gama;
+		Color *c;
+		Color *c_0;
+		Color *c_1;
+		Color *c_2;
+		int numberOfTriangles = object->numberOfTriangles;
 
-void Scene::rasterization(Mesh* object){
-    //solid
-    if (object->type==1){
-        double alpha,beta,gama;
-        Color *c;
-        Color *c_0;
-        Color *c_1;
-        Color *c_2;
-        int numberOfTriangles = object->numberOfTriangles;
+	cout<<"bullshit 0"<<endl;
+		int numOfVert = object->vertexDataCopy.size();
 
-        for (int i = 0 ;i<numberOfTriangles;i++){
+		for (int i = 0; i < numOfVert-2; i++)
+		{
+			//
+			// int v0_id = object->triangles[i].getFirstVertexId() - 1;
+			// int v1_id = object->triangles[i].getSecondVertexId() - 1;
+			// int v2_id = object->triangles[i].getThirdVertexId() - 1;
 
-            int v0_id = object->triangles[i].getFirstVertexId() -1;
-            int v1_id = object->triangles[i].getSecondVertexId() -1;
-            int v2_id = object->triangles[i].getThirdVertexId() -1;
+	cout<<"bullshit 1"<<endl;
 
-            int c0_id = (vertices[v0_id]->colorId)-1;
-            int c1_id = (vertices[v1_id]->colorId)-1;
-            int c2_id = (vertices[v2_id]->colorId)-1;
+			int c0_id = (object->vertexDataCopy[3*i].colorId) - 1;
+			int c1_id = (object->vertexDataCopy[3*i+1].colorId) - 1;
+			int c2_id = (object->vertexDataCopy[3*i+2].colorId) - 1;
 
-            double x_0 = vertices[v0_id]->x;
-            double y_0 = vertices[v0_id]->y;
-            c_0 = colorsOfVertices[c0_id];
+			double x_0 = object->vertexDataCopy[3*i].x;
+			double y_0 = object->vertexDataCopy[3*i].y;
+			c_0 = colorsOfVertices[c0_id];
 
-            double x_1 = vertices[v1_id]->x;
-            double y_1 = vertices[v1_id]->y;
-            c_1 = colorsOfVertices[c1_id];
+			double x_1 = object->vertexDataCopy[3*i+1].x;
+			double y_1 = object->vertexDataCopy[3*i+1].y;
+			c_1 = colorsOfVertices[c1_id];
 
-            double x_2 = vertices[v2_id]->x;
-            double y_2 = vertices[v2_id]->y;
-            c_2 = colorsOfVertices[c2_id];
+			double x_2 = object->vertexDataCopy[3*i+2].x;
+			double y_2 = object->vertexDataCopy[3*i+2].x;
+			c_2 = colorsOfVertices[c2_id];
 
-            double y_min = min(y_0,min(y_1,y_2));
-            double x_min = min(x_0,min(x_1,x_2));
-            double y_max = max(y_0,max(y_1,y_2));
-            double x_max = max(x_0,max(x_1,x_2));
+			double y_min = min(y_0, min(y_1, y_2));
+			double x_min = min(x_0, min(x_1, x_2));
+			double y_max = max(y_0, max(y_1, y_2));
+			double x_max = max(x_0, max(x_1, x_2));
+	cout<<"bullshit 2"<<endl;
 
-            for(int y=y_min;y<y_max;y++){
-                for(int x=x_min;x<x_max;x++){
-                    alpha = f12(x,y,x_1,x_2,y_1,y_2)/f12(x_0,y_0,x_1,x_2,y_1,y_2);
-                    beta = f20(x,y,x_2,x_0,y_2,y_0)/f20(x_1,y_1,x_2,x_0,y_2,y_0);
-                    gama = f01(x,y,x_0,x_1,y_0,y_1)/f01(x_2,y_2,x_0,x_1,y_0,y_1);
+			for (int y = y_min; y < y_max; y++)
+			{
+				for (int x = x_min; x < x_max; x++)
+				{
+					alpha = f12(x, y, x_1, x_2, y_1, y_2) / f12(x_0, y_0, x_1, x_2, y_1, y_2);
+					beta = f20(x, y, x_2, x_0, y_2, y_0) / f20(x_1, y_1, x_2, x_0, y_2, y_0);
+					gama = f01(x, y, x_0, x_1, y_0, y_1) / f01(x_2, y_2, x_0, x_1, y_0, y_1);
 
-                    if (alpha>=0 && beta>=0 && gama>=0 && i< 4 ){
-                        //c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
+					if (alpha >= 0 && beta >= 0 && gama >= 0 && i < 4)
+					{
+						c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
+						draw(x,y,c, camera);
+					}
+					std::cout << "triangle3 :" << i << endl;
+				}
+			}
+		}
+	}
+	else
+	{
+		double alpha, beta, gama;
+		Color *c;
+		Color *c_0;
+		Color *c_1;
+		Color *c_2;
 
-                           // draw(x,y,c);
+		int lineCount = object->lines.size();
 
-                    }
-                    std::cout<<"triangle3 :"<<i<<endl;
+		for (int i = 0; i < lineCount; i++)
+		{
+			Mesh::Line line = object->lines[i];
+			double x_0 = line.v1.x;
+			double y_0 = line.v1.y;
+			int id0 = line.v1.colorId;
+			// double x_0 = object->vertexDataCopy[3*i].x;
+			// double y_0 = object->vertexDataCopy[i].y;
 
+			// int id0 = object->vertexDataCopy[3*i+2].colorId;
+			c_0 = colorsOfVertices[id0 - 1];
 
-                }
-            }
+			double x_1 = line.v2.x;
+			double y_1 = line.v2.y;
+			int id1 = line.v2.colorId;
+			c_1 = colorsOfVertices[id1 - 1];
 
+			// cout<<"x_0:"<<x_0<<",y_0:"<<y_1<<"x_1:"<<x_1<<",y_1:"<<y_1<<endl;
 
-        }
-    }
-    else{
-        double alpha,beta,gama;
-        Color *c;
-        Color *c_0;
-        Color *c_1;
-        Color *c_2;
-        int numberOfTriangles = object->numberOfTriangles;
-        std::cout<<"numberOfTriangles: "<<numberOfTriangles<<endl;
-        for(int i=0;i<numberOfTriangles;i++){
+			//draw for 0->1 1->2 2->0
+			// cout <<"calling midpoint for i:" << i << endl;
+			midpoint_algorithm(x_0, y_0, *c_0, x_1, y_1, *c_1,camera);
+			// midpoint_algorithm(x_1,y_1,c_1,x_2,y_2,c_2);
+			// midpoint_algorithm(x_2,y_2,c_2,x_0,y_0,c_0);
+		}
+	}
 
-            double x_0 = object->vertexDataCopy[3*i].x;
-            double y_0 = object->vertexDataCopy[i].y;
-
-            int id0 = object->vertexDataCopy[3*i+2].colorId;
-            c_0 = colorsOfVertices[id0-1];
-
-            double x_1 = object->vertexDataCopy[3*i+1].x;
-            double y_1 = object->vertexDataCopy[3*i+1].y;
-            int id1 = object->vertexDataCopy[3*i+1].colorId;
-            c_1 = colorsOfVertices[id1-1];
-
-
-            double x_2 = object->vertexDataCopy[3*i+2].x;
-            double y_2 = object->vertexDataCopy[3*i+2].y;
-            int id2 = object->vertexDataCopy[3*i+2].colorId;
-            c_2= colorsOfVertices[id2-1];
-
-            /*
-            int v0_id = object->triangles[i].getFirstVertexId() -1;
-            int v1_id = object->triangles[i].getSecondVertexId() -1;
-            int v2_id = object->triangles[i].getThirdVertexId() -1;
-
-            int c0_id = (vertices[v0_id]->colorId)-1;
-            int c1_id = (vertices[v1_id]->colorId)-1;
-            int c2_id = (vertices[v2_id]->colorId)-1;
-
-            double x_0 = vertices[v0_id]->x;
-            double y_0 = vertices[v0_id]->y;
-            c_0 = colorsOfVertices[c0_id];
-
-            double x_1 = vertices[v1_id]->x;
-            double y_1 = vertices[v1_id]->y;
-            c_1 = colorsOfVertices[c1_id];
-
-            double x_2 = vertices[v2_id]->x;
-            double y_2 = vertices[v2_id]->y;
-            c_2 = colorsOfVertices[c2_id];*/
-
-            cout<<"x_0:"<<x_0<<",y_0:"<<y_1<<"x_1:"<<x_1<<",y_1:"<<y_1<<"x_2:"<<x_2<<",y_2:"<<y_2<<endl;
-
-            //draw for 0->1 1->2 2->0
-            midpoint_algorithm(x_0,y_0,c_0,x_1,y_1,c_1);
-            midpoint_algorithm(x_1,y_1,c_1,x_2,y_2,c_2);
-            midpoint_algorithm(x_2,y_2,c_2,x_0,y_0,c_0);
-
-        }
-    }
+	cout <<" rasterization doen for mesh: " << object->meshId << endl;
 }
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
@@ -236,15 +372,15 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	// Viewing Transformations
 	Matrix4 Mcam;
-	Mcam  = Mcam.GetMcam(camera);
-
+	Mcam = Mcam.GetMcam(camera);
 
 	// 1 for perspective, 0 for orthographic
 	Matrix4 Mproj;
-	if(camera->projectionType == 0){
+	if (camera->projectionType == 0)
+	{
 		Mproj = Mproj.GetMortho(camera);
 	}
-	else if(camera->projectionType == 1)
+	else if (camera->projectionType == 1)
 	{
 		Mproj = Mproj.GetMpers(camera);
 	}
@@ -256,28 +392,28 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// for each vertex of a mesh. remember, Mmodel is specific to a Mesh, while others are generic.
 
 	int meshCount = meshes.size();
-	for(int i=0; i < meshCount; i++)
+	for (int i = 0; i < meshCount; i++)
 	{
 		Mesh *mesh = meshes[i];
 
-		Matrix4 McamMmodel = multiplyMatrixWithMatrix(Mcam,mesh->modelM);
+		Matrix4 McamMmodel = multiplyMatrixWithMatrix(Mcam, mesh->modelM);
 		Matrix4 MprojMcamMmodel = multiplyMatrixWithMatrix(Mproj, McamMmodel);
 		// only M_vp mulp is left, do that after perspective divide if cam is perspective.
 
-		for(auto tri : mesh->triangles)
+		for (auto tri : mesh->triangles)
 		{
-			if(mesh->type ==0) // Wireframe mode
+			if (mesh->type == 0) // Wireframe mode
 			{
-				Vec3 *v1data = vertices[tri.getFirstVertexId()-1];
-				Vec3 *v2data = vertices[tri.getSecondVertexId()-1];
-				Vec3 *v3data = vertices[tri.getThirdVertexId()-1];
+				Vec3 *v1data = vertices[tri.getFirstVertexId() - 1];
+				Vec3 *v2data = vertices[tri.getSecondVertexId() - 1];
+				Vec3 *v3data = vertices[tri.getThirdVertexId() - 1];
 
 				// do also BFC here??
 				// calculate normal
-				Vec3 ab,ac,n;
-				ab = subtractVec3(*v2data , *v1data);
-				ac = subtractVec3(*v3data , *v1data);
-				n = crossProductVec3(ab,ac);
+				Vec3 ab, ac, n;
+				ab = subtractVec3(*v2data, *v1data);
+				ac = subtractVec3(*v3data, *v1data);
+				n = crossProductVec3(ab, ac);
 				n = normalizeVec3(n);
 
 				// Adds w component, convert to homogenous coords.
@@ -297,43 +433,10 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				clipAndAddToLinesList(&line1, mesh, camera, Mvp);
 				clipAndAddToLinesList(&line2, mesh, camera, Mvp);
 				clipAndAddToLinesList(&line3, mesh, camera, Mvp);
+				cout <<"[CLIPPING DONE]"<< endl;
 
-				// bool clipped = clippingTest(&line1);
-				// if(!clipped){
-
-				// 	if(camera->projectionType == 1){
-				// 		// perspective cam, do perspective divide
-				// 		line1.v1.x /= line1.v1.t;
-				// 		line1.v1.y /= line1.v1.t;
-				// 		line1.v1.z /= line1.v1.t;
-				// 		line1.v1.t = 1.0;
-
-				// 		line1.v2.x /= line1.v2.t;
-				// 		line1.v2.y /= line1.v2.t;
-				// 		line1.v2.z /= line1.v2.t;
-				// 		line1.v2.t = 1.0;
-				// 	}
-				// 	// complete transformations by multiplying with M_viewport
-				// 	line1.v1 = multiplyMatrixWithVec4(Mvp, line1.v1);
-				// 	line1.v2 = multiplyMatrixWithVec4(Mvp, line1.v2);
-				// 	mesh->lines.push_back(line1);
-				// }
-
-				// clipped = clippingTest(&line2);
-				// if(!clipped){
-				// 	// complete transformations by multiplying with M_viewport
-				// 	line2.v1 = multiplyMatrixWithVec4(Mvp, line2.v1);
-				// 	line2.v2 = multiplyMatrixWithVec4(Mvp, line2.v2);
-				// 	mesh->lines.push_back(line2);
-				// }
-
-				// clipped = clippingTest(&line3);
-				// if(!clipped){
-				// 	// complete transformations by multiplying with M_viewport
-				// 	line3.v1 = multiplyMatrixWithVec4(Mvp, line3.v1);
-				// 	line3.v2 = multiplyMatrixWithVec4(Mvp, line3.v2);
-				// 	mesh->lines.push_back(line3);
-				// }
+				cout << "line count: " << mesh->lines.size() << endl;
+				rasterization(mesh, camera);
 			}
 
 			else // solid mode
@@ -342,20 +445,21 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 				// transform all vertices, no need to form lines. keep the same triangle structure.
 				// just copy vertex data.
-				for(int j=0; j < 4; j++)
+				for (int j = 0; j < 4; j++)
 				{
 					int ind = tri.vertexIds[j];
-					Vec3* data = vertices[ind-1];
+					Vec3 *data = vertices[ind - 1];
 					Vec4 vert;
 					vert.x = data->x;
 					vert.y = data->y;
 					vert.z = data->z;
 					vert.t = 1.0; // homogenous w coord.
 					vert.colorId = data->colorId;
-					
+
 					Vec4 transedVert = multiplyMatrixWithVec4(MprojMcamMmodel, vert);
 
-					if(camera->projectionType == 1){
+					if (camera->projectionType == 1)
+					{
 						// perspective cam, do perspective divide
 						transedVert.x /= transedVert.t;
 						transedVert.y /= transedVert.t;
@@ -369,59 +473,53 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 					// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
 					mesh->vertexDataCopy.push_back(finalVert);
 
-
 					// but we will drop entire triangles, vertices during clipping? the list will get broken...
 					// need to delete the copies of deleted vertices aswell. vector will "move them down" to correct positions after erase...
 					// vec.erase( vec.begin() + 3 ); exp code to use for deletion.
 				}
-			
 			}
 
 			// do BFC
 			// add to list if visible.
-
 		}
 	}
 
-    rasterization(meshes[0]);
 }
 
 void Scene::calculateModelingTransformations()
 {
-	for(int i = 0; i < meshes.size(); i++)
+	for (int i = 0; i < meshes.size(); i++)
 	{
 		Mesh *m = meshes[i];
 		m->modelM = getIdentityMatrix();
 
-		for(int j = 0; j < m -> numberOfTransformations; j++)
+		for (int j = 0; j < m->numberOfTransformations; j++)
 		{
 			// ids start from 1, again :/
-			int tIndex = m->transformationIds[j] -1;
+			int tIndex = m->transformationIds[j] - 1;
 
 			char type = m->transformationTypes[j];
 			cout << "index of transformation: " << tIndex << " type: " << type << endl;
 
-			if(type == 't')
+			if (type == 't')
 			{
 				// do translation transformation
 				Translation *trans = this->translations[tIndex];
 				Matrix4 transMatrix(trans);
 
 				// Accumulate the transformation.
-				m->modelM  = multiplyMatrixWithMatrix(transMatrix, m->modelM);
-
+				m->modelM = multiplyMatrixWithMatrix(transMatrix, m->modelM);
 			}
-			else if(type == 's')
+			else if (type == 's')
 			{
 				// do scaling transformation
 				Scaling *scaling = this->scalings[tIndex];
 				Matrix4 scalingMatrix(scaling);
 
 				// Accumulate the transformation.
-				m->modelM  = multiplyMatrixWithMatrix(scalingMatrix, m->modelM);
-
+				m->modelM = multiplyMatrixWithMatrix(scalingMatrix, m->modelM);
 			}
-			else if(type == 'r')
+			else if (type == 'r')
 			{
 				// do rotation transformation
 				Rotation *rot = this->rotations[tIndex];
@@ -429,129 +527,182 @@ void Scene::calculateModelingTransformations()
 				rotationMatrix = rotationMatrix.GetRotationMatrix(rot);
 
 				// Accumulate the transformation.
-				m->modelM  = multiplyMatrixWithMatrix(rotationMatrix, m->modelM);
+				m->modelM = multiplyMatrixWithMatrix(rotationMatrix, m->modelM);
 			}
 		}
-
 	}
 	// at this point, each mesh has the final modelling matrix info in their "mesh->modelM" field.
-
-
 }
 
 bool isVisible(double den, double num, double *te, double *tl)
 {
 	double t;
-	if(den > 0)
+	if (den > 0)
 	{ // potentially entering
 		t = num / den;
-		if(t > *tl)
+		if (t > *tl)
 		{
 			return false;
 		}
-		if(t > *te){
+		if (t > *te)
+		{
 			*te = t;
 		}
 	}
-	else if(den < 0)
+	else if (den < 0)
 	{ // potentially leaving
-		t = num/den;
-		if(t < *te){
+		t = num / den;
+		if (t < *te)
+		{
 			return false;
 		}
-		if(t < *tl){
+		if (t < *tl)
+		{
 			*tl = t;
 		}
 	}
-	else if(num > 0)
+	else if (num > 0)
 	{ // line parallel to edge
 		return false;
 	}
-	return true;	
+	return true;
 }
 
 void Scene::clipAndAddToLinesList(Mesh::Line *line, Mesh *mesh, Camera *camera, Matrix4 &Mvp)
 {
-	bool clipped = clippingTest(line);
-	if(!clipped)
+	if (camera->projectionType == 1)
 	{
-		if(camera->projectionType == 1){
-			// perspective cam, do perspective divide
-			line->v1.x /= line->v1.t;
-			line->v1.y /= line->v1.t;
-			line->v1.z /= line->v1.t;
-			line->v1.t = 1.0;
+		// perspective cam, do perspective divide
+		line->v1.x /= line->v1.t;
+		line->v1.y /= line->v1.t;
+		line->v1.z /= line->v1.t;
+		line->v1.t = 1.0;
 
-			line->v2.x /= line->v2.t;
-			line->v2.y /= line->v2.t;
-			line->v2.z /= line->v2.t;
-			line->v2.t = 1.0;
-		}
+		line->v2.x /= line->v2.t;
+		line->v2.y /= line->v2.t;
+		line->v2.z /= line->v2.t;
+		line->v2.t = 1.0;
+	}
+	line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
+	line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
+
+	cout << "DO cllipping test for line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
+	bool isvisible = clippingTest(line, camera);
+	if (isvisible)
+	{
+		// if (camera->projectionType == 1)
+		// {
+		// 	// perspective cam, do perspective divide
+		// 	line->v1.x /= line->v1.t;
+		// 	line->v1.y /= line->v1.t;
+		// 	line->v1.z /= line->v1.t;
+		// 	line->v1.t = 1.0;
+
+		// 	line->v2.x /= line->v2.t;
+		// 	line->v2.y /= line->v2.t;
+		// 	line->v2.z /= line->v2.t;
+		// 	line->v2.t = 1.0;
+		// }
 		// complete transformations by multiplying with M_viewport
-		line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
-		line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
+		// cout << "Before VP: " << line->v1 << endl;
+		// line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
+		// line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
+		// cout << "After VP: " << line->v1 << endl;
+		cout << "Visible line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
 		mesh->lines.push_back(*line);
 	}
+	else{
+		cout << "Clipped line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
+
+	}
 }
-bool Scene::clippingTest(Mesh::Line *line)
+bool Scene::clippingTest(Mesh::Line *line, Camera *cam)
 {
-	double dx,dy,dz;
-	double xmin,xmax,ymin,ymax,zmin,zmax;
+	double dx, dy, dz;
+	double xmin, xmax, ymin, ymax, zmin, zmax;
 
-	dx = line->v1.x - line->v2.x;
-	dy = line->v1.y - line->v2.y;
-	dz = line->v1.z - line->v2.z;
+	dx = line->v2.x - line->v1.x;
+	dy = line->v2.y - line->v1.y;
+	dz = line->v2.z - line->v1.z;
 
-	
-	if(ABS(line->v1.t) > ABS(line->v2.t)){
-		xmax = ABS(line->v1.t);
-	}
-	else{
-		xmax = ABS(line->v2.t);
-	}
-	ymax = zmax = xmax;
 
-	if(-ABS(line->v1.t) < -ABS(line->v2.t)){
-		xmin = -ABS(line->v1.t);
-	}
-	else{
-		xmin = -ABS(line->v2.t);
-	}
-	ymin = zmin = xmin;
+	// dx = (line->v1.x - line->v2.x);
+	// dy = (line->v1.y - line->v2.y);
+	// dz = (line->v1.z - line->v2.z);
+	// if (ABS(line->v1.t) > ABS(line->v2.t))
+	// {
+	// 	xmax = ABS(line->v1.t);
+	// }
+	// else
+	// {
+	// 	xmax = ABS(line->v2.t);
+	// }
+	// ymax = zmax = xmax;
 
-	// double* te = new double(0);
-	// double* tl = new double(1);
-	double te = 0;
-	double tl = 1;
+	// if (-ABS(line->v1.t) < -ABS(line->v2.t))
+	// {
+	// 	xmin = -ABS(line->v1.t);
+	// }
+	// else
+	// {
+	// 	xmin = -ABS(line->v2.t);
+	// }
+	// ymin = zmin = xmin;
+
+	ymin = zmin = xmin = 0;
+	ymax = zmax = xmax = cam->horRes;
+	ymax = cam->verRes;
+
+
+	double* te = new double(0);
+	double* tl = new double(1);
+
+	*te = 0;
+	*tl = 1;
+	// double te = 0;
+	// double tl = 1;
 	bool visible = false;
 
 	double x0 = line->v1.x;
 	double y0 = line->v1.y;
 	double z0 = line->v1.z;
 
+	// double x0 = line->v2.x;
+	// double y0 = line->v2.y;
+	// double z0 = line->v2.z;
 	Vec4 newV1(line->v1);
 	Vec4 newV2(line->v2);
-	if(isVisible(dx, xmin - x0, &te, &tl)){
-		if(isVisible(-dx, x0 - xmax, &te, &tl)){
-			if(isVisible(dy, ymin - y0, &te, &tl)){
-				if(isVisible(-dy, y0-ymax, &te, &tl)){
-					if(isVisible(dz, zmin-z0, &te, &tl)){
-						if(isVisible(-dz, z0-zmax, &te, &tl)){
+	if (isVisible(dx, xmin - x0, te, tl))
+	{
+		if (isVisible(-dx, x0 - xmax, te, tl))
+		{
+			if (isVisible(dy, ymin - y0, te, tl))
+			{
+				if (isVisible(-dy, y0 - ymax, te, tl))
+				{
+					if (isVisible(dz, zmin - z0, te, tl))
+					{
+						if (isVisible(-dz, z0 - zmax, te, tl))
+						{
 							visible = true;
 							// get clipped vertex data
-							if(tl < 1){
-								newV2.x = x0 + dx*tl;
-								newV2.y = y0 + dy*tl;
-								newV2.z = z0 + dz*tl;
+							if (*tl < 1)
+							{
+								newV2.x = x0 + dx * (*tl);
+								newV2.y = y0 + dy * (*tl);
+								newV2.z = z0 + dz * (*tl);
 							}
-							if(te > 0){
-								newV1.x = x0 + dx*te;
-								newV1.y = y0 + dy*te;
-								newV1.z = z0 + dz*te;
+							if (*te > 0)
+							{
+								newV1.x = x0 + dx * (*te);
+								newV1.y = y0 + dy * (*te);
+								newV1.z = z0 + dz * (*te);
 							}
 							// update the line.
 							line->v1 = newV1;
 							line->v2 = newV2;
+
+							cout <<"[VISIBLE, new vertices] " << line->v1 << " v2: " << line->v2 << endl;
 						}
 					}
 				}
@@ -559,10 +710,8 @@ bool Scene::clippingTest(Mesh::Line *line)
 		}
 	}
 
-
 	return visible;
 }
-
 
 /*
 	Parses XML file
@@ -584,13 +733,16 @@ Scene::Scene(const char *xmlPath)
 
 	// read culling
 	pElement = pRoot->FirstChildElement("Culling");
-	if (pElement != NULL) {
+	if (pElement != NULL)
+	{
 		str = pElement->GetText();
-		
-		if (strcmp(str, "enabled") == 0) {
+
+		if (strcmp(str, "enabled") == 0)
+		{
 			cullingEnabled = true;
 		}
-		else {
+		else
+		{
 			cullingEnabled = false;
 		}
 	}
@@ -608,10 +760,12 @@ Scene::Scene(const char *xmlPath)
 		// read projection type
 		str = pCamera->Attribute("type");
 
-		if (strcmp(str, "orthographic") == 0) {
+		if (strcmp(str, "orthographic") == 0)
+		{
 			cam->projectionType = 0;
 		}
-		else {
+		else
+		{
 			cam->projectionType = 1;
 		}
 
@@ -739,10 +893,12 @@ Scene::Scene(const char *xmlPath)
 		// read projection type
 		str = pMesh->Attribute("type");
 
-		if (strcmp(str, "wireframe") == 0) {
+		if (strcmp(str, "wireframe") == 0)
+		{
 			mesh->type = 0;
 		}
-		else {
+		else
+		{
 			mesh->type = 1;
 		}
 
@@ -771,14 +927,14 @@ Scene::Scene(const char *xmlPath)
 		char *clone_str;
 		int v1, v2, v3;
 		XMLElement *pFaces = pMesh->FirstChildElement("Faces");
-        str = pFaces->GetText();
+		str = pFaces->GetText();
 		clone_str = strdup(str);
 
 		row = strtok(clone_str, "\n");
 		while (row != NULL)
 		{
 			int result = sscanf(row, "%d %d %d", &v1, &v2, &v3);
-			
+
 			// vertices[v1-1]->refCount++;
 			// if(vertices[v1-1]->refCount>1){
 			// 	// shared vertice? what if its us? using this in more than one triangle??? FUCK
@@ -789,7 +945,8 @@ Scene::Scene(const char *xmlPath)
 			// 	// found it, so shared.
 			// 	this->sharedVertexIndices.push_back()
 			// }
-			if (result != EOF) {
+			if (result != EOF)
+			{
 				mesh->triangles.push_back(Triangle(v1, v2, v3));
 			}
 			row = strtok(NULL, "\n");
