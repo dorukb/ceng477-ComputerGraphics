@@ -203,7 +203,7 @@ Vec4 multiplyMatrixWithVec4(Matrix4 m, Vec4 v)
     return Vec4(values[0], values[1], values[2], values[3], v.colorId);
 }
 
-Color* subColor(Color* C0,Color* C1){
+Color* subColor(Color* C1,Color* C0){
     double r = C1->r-C0->r;
     double g = C1->g-C0->g;
     double b = C1->b-C0->b;

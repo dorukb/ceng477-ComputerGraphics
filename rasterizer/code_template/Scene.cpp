@@ -35,12 +35,15 @@ void Scene::draw(int x, int y, Color *c, Camera *cam)
 	}
 	if (x >= cam->horRes || y >= cam->verRes)
 		return;
-	image[x][y].r = 0;
+	/*image[x][y].r = 0;
 	image[x][y].b = 0;
-	image[x][y].g = 0;
-	/* image[x][y].r=round(c->r);
-     image[x][y].b=round(c->b);
-     image[x][y].g =round(c->g);*/
+	image[x][y].g = 0;*/
+	if(image[x][y].r==backgroundColor.r && image[x][y].g==backgroundColor.g && image[x][y].b==backgroundColor.b ){
+        image[x][y].r=round(c->r);
+        image[x][y].b=round(c->b);
+        image[x][y].g =round(c->g);
+	}
+
 }
 
 double Scene ::f01(double x, double y, double x0, double x1, double y0, double y1)
@@ -172,13 +175,12 @@ void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, do
 	 	}
 	 }*/
 	if(0<m && m<=1){
-	    cout<<x_0<<y_0<<x_1<<y_1<<endl;
-	    cout <<"deneme"<<endl;
 	    if(x_1>=x_0){
             y=y_0;
             d = 2*(y_0-y_1)+(x_1-x_0);
             Color* c = &c_0;
             Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+            cout<<"r:"<<dc->r<<"g:"<<dc->g<<"b:"<<dc->b<<endl;
             for(x=x_0; x<x_1;x++){
                 draw(x,y,c, camera);
                 if(d<0){
@@ -195,6 +197,7 @@ void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, do
             d = 2*(y_1-y_0)+(x_0-x_1);
             Color* c = &c_1;
             Color* dc = divColor(subColor(&c_0,&c_1),(x_0-x_1)) ;
+            cout<<"infr:"<<dc->r<<"g:"<<dc->g<<"b:"<<dc->b<<endl;
             for(x=x_1; x<x_0;x++){
                 draw(x,y,c, camera);
                 if(d<0){
@@ -345,7 +348,7 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 		Color *c_2;
 		int numberOfTriangles = object->numberOfTriangles;
 
-	cout<<"bullshit 0"<<endl;
+
 		int numOfVert = object->vertexDataCopy.size();
 
 		for (int i = 0; i < numOfVert-2; i++)
@@ -355,7 +358,6 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 			// int v1_id = object->triangles[i].getSecondVertexId() - 1;
 			// int v2_id = object->triangles[i].getThirdVertexId() - 1;
 
-	cout<<"bullshit 1"<<endl;
 
 			int c0_id = (object->vertexDataCopy[3*i].colorId) - 1;
 			int c1_id = (object->vertexDataCopy[3*i+1].colorId) - 1;
@@ -377,7 +379,7 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 			double x_min = min(x_0, min(x_1, x_2));
 			double y_max = max(y_0, max(y_1, y_2));
 			double x_max = max(x_0, max(x_1, x_2));
-	cout<<"bullshit 2"<<endl;
+
 
 			for (int y = y_min; y < y_max; y++)
 			{
@@ -427,14 +429,12 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 			// cout<<"x_0:"<<x_0<<",y_0:"<<y_1<<"x_1:"<<x_1<<",y_1:"<<y_1<<endl;
 
 			//draw for 0->1 1->2 2->0
-			// cout <<"calling midpoint for i:" << i << endl;
 			midpoint_algorithm(x_0, y_0, *c_0, x_1, y_1, *c_1,camera);
-			// midpoint_algorithm(x_1,y_1,c_1,x_2,y_2,c_2);
-			// midpoint_algorithm(x_2,y_2,c_2,x_0,y_0,c_0);
+
 		}
 	}
 
-	cout <<" rasterization doen for mesh: " << object->meshId << endl;
+	//cout <<" rasterization doen for mesh: " << object->meshId << endl;
 }
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
@@ -507,9 +507,9 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				clipAndAddToLinesList(&line1, mesh, camera, Mvp);
 				clipAndAddToLinesList(&line2, mesh, camera, Mvp);
 				clipAndAddToLinesList(&line3, mesh, camera, Mvp);
-				cout <<"[CLIPPING DONE]"<< endl;
+				//cout <<"[CLIPPING DONE]"<< endl;
 
-				cout << "line count: " << mesh->lines.size() << endl;
+				//cout << "line count: " << mesh->lines.size() << endl;
 
 			}
 
@@ -589,7 +589,7 @@ void Scene::calculateModelingTransformations()
 			int tIndex = m->transformationIds[j] - 1;
 
 			char type = m->transformationTypes[j];
-			cout << "index of transformation: " << tIndex << " type: " << type << endl;
+			//cout << "index of transformation: " << tIndex << " type: " << type << endl;
 
 			if (type == 't')
 			{
@@ -676,7 +676,7 @@ void Scene::clipAndAddToLinesList(Mesh::Line *line, Mesh *mesh, Camera *camera, 
 	line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
 	line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
 
-	cout << "DO cllipping test for line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
+	//cout << "DO cllipping test for line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
 	bool isvisible = clippingTest(line, camera);
 	if (isvisible)
 	{
@@ -698,11 +698,11 @@ void Scene::clipAndAddToLinesList(Mesh::Line *line, Mesh *mesh, Camera *camera, 
 		// line->v1 = multiplyMatrixWithVec4(Mvp, line->v1);
 		// line->v2 = multiplyMatrixWithVec4(Mvp, line->v2);
 		// cout << "After VP: " << line->v1 << endl;
-		cout << "Visible line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
+		//cout << "Visible line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
 		mesh->lines.push_back(*line);
 	}
 	else{
-		cout << "Clipped line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
+		//cout << "Clipped line: v1: " << line->v1 << "v2: "<< line->v2 << endl;
 
 	}
 }
@@ -792,7 +792,7 @@ bool Scene::clippingTest(Mesh::Line *line, Camera *cam)
 							line->v1 = newV1;
 							line->v2 = newV2;
 
-							cout <<"[VISIBLE, new vertices] " << line->v1 << " v2: " << line->v2 << endl;
+							//cout <<"[VISIBLE, new vertices] " << line->v1 << " v2: " << line->v2 << endl;
 						}
 					}
 				}
