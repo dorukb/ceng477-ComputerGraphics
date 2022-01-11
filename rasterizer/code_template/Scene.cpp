@@ -28,19 +28,19 @@ using namespace std;
 
 void Scene::draw(int x, int y, Color *c, Camera *cam)
 {
+
 	if (x < 0 || y < 0)
 	{
 		return;
 	}
 	if (x >= cam->horRes || y >= cam->verRes)
 		return;
-
 	image[x][y].r = 0;
 	image[x][y].b = 0;
 	image[x][y].g = 0;
-	// image[x][y].r=round(c->r);
-    // image[x][y].b=round(c->b);
-    // image[x][y].g =round(c->g);
+	/* image[x][y].r=round(c->r);
+     image[x][y].b=round(c->b);
+     image[x][y].g =round(c->g);*/
 }
 
 double Scene ::f01(double x, double y, double x0, double x1, double y0, double y1)
@@ -59,203 +59,277 @@ double Scene ::f20(double x, double y, double x2, double x0, double y2, double y
 void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, double y_1, Color c_1, Camera *camera)
 {
 	double m = (y_1 - y_0) / (x_1 - x_0);
-	int x, y, d;
+	double x, y, d;
 	double alpha = ABS(x_1 - x_0);
 
-	x = min(x_0, x_1);
-	y = min(y_0, y_1);
+	int minx = min(x_0, x_1);
+	int miny = min(y_0, y_1);
 
-	int testx = max(x_0, x_1);
-	int testy = max(y_0, y_1);
-	if (x < 0 || y < 0 || testx >= camera->horRes || testy >= camera->verRes)
+	int maxx = max(x_0, x_1);
+	int maxy = max(y_0, y_1);
+	if (minx < 0 || miny < 0 || maxx >= camera->horRes || maxy >= camera->verRes)
 	{
 		return;
 	}
-
+/*
 	cout <<"BEFORE IMAGE" << "maxx: " << testx << " maxY: " << testy << " xmin: "<< x << " ymin: "<<y <<" m: " <<m<<endl;
-	// if (0.0 < m && m < 1.0)
-	// {
-	// 	x = min(x_0, x_1);
-	// 	y = min(y_0, y_1);
+	 if (0.0 < m && m < 1.0)
+	 {
+	 	x = min(x_0, x_1);
+	 	y = min(y_0, y_1);
 
-	// 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
+	 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
 
-	// 	for (; x < max(x_0, x_1); x++)
-	// 	{
-	// 		draw(x,y,0, camera);
-	// 		// image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
-	// 		// image[x][y].g = 0; // (double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
-	// 		// image[x][y].b = 0; // (double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
-	// 		if (d <= 0)
-	// 		{ //choose E
-	// 			d += 2 * abs(y_1 - y_0);
-	// 		}
-	// 		else
-	// 		{ //choose NE
-	// 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
-	// 			y++;
-	// 			if(y >= 700)break;
-	// 		}
-	// 	}
-	// }
-	// else if (1.0 <= m)
-	// {
-	// 	x = min(x_0, x_1);
-	// 	y = min(y_0, y_1);
-	// 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
+	 	for (; x < max(x_0, x_1); x++)
+	 	{
+	 		draw(x,y,0, camera);
+	 		// image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
+	 		// image[x][y].g = 0; // (double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
+	 		// image[x][y].b = 0; // (double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
+	 		if (d <= 0)
+	 		{ //choose E
+	 			d += 2 * abs(y_1 - y_0);
+	 		}
+	 		else
+	 		{ //choose NE
+	 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
+	 			y++;
+	 			if(y >= 700)break;
+	 		}
+	 	}
+	 }*/
+	/* if (1.0 <= m)
+	 {
+	 	x = min(x_0, x_1);
+	 	y = min(y_0, y_1);
+	 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
 
-	// 	for (; y < max(y_0, y_1); y++)
-	// 	{			
-	// 		// draw(x,y,0, camera);
+	 	for (; y < max(y_0, y_1); y++)
+	 	{
+	 		 draw(x,y,0, camera);
 
 	// 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
 	// 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
 	// 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
-	// 		if (d <= 0)
-	// 		{ //choose N
-	// 			d += 2 * abs(x_1 - x_0);
-	// 		}
-	// 		else
-	// 		{ //choose NE
-	// 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
-	// 			x++;
-	// 			if(x>=700)break;
-	// 		}
-	// 	}
-	// }
-	// else if (m <= 0 && m >= -1.0)
-	// {
-	// 	x = min(x_0, x_1);
-	// 	y = max(y_0, y_1);
+	 		if (d <= 0)
+	 		{ //choose N
+	 			d += 2 * abs(x_1 - x_0);
+	 		}
+	 		else
+	 		{ //choose NE
+	 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
+	 			x++;
+	 			if(x>=700)break;
+	 		}
+	 	}
+	 }*/
+	 /*else if (m <= 0 && m >= -1.0)
+	 {
+	 	x = min(x_0, x_1);
+	 	y = max(y_0, y_1);
 
-	// 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
-	// 	for (; x < max(x_0, x_1); x++)
-	// 	{
-	// 		image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
-	// 		image[x][y].g = 0; //(double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
-	// 		image[x][y].b = 0; //(double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
-	// 		if (d <= 0)
-	// 		{ //choose W
-	// 			d += 2 * abs(y_1 - y_0);
-	// 		}
-	// 		else
-	// 		{ //choose NW
-	// 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
-	// 			y--;
-	// 			if(y<0)break;
-	// 		}
-	// 	}
-	// }
-	// else if (-1.0 > m)
-	// {
-	// 	x = max(x_0, x_1);
-	// 	y = min(y_0, y_1);
-	// 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
-	// 	for (; y < max(y_0, y_1); y++)
-	// 	{
-	// 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
-	// 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
-	// 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
-	// 		if (d <= 0)
-	// 		{ //choose N
-	// 			d += 2 * abs(x_1 - x_0);
-	// 		}
-	// 		else
-	// 		{ // choose NW
-	// 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
-	// 			x--;
+	 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
+	 	for (; x < max(x_0, x_1); x++)
+	 	{
+	 		image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
+	 		image[x][y].g = 0; //(double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
+	 		image[x][y].b = 0; //(double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
+	 		if (d <= 0)
+	 		{ //choose W
+	 			d += 2 * abs(y_1 - y_0);
+	 		}
+	 		else
+	 		{ //choose NW
+	 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
+	 			y--;
+	 			if(y<0)break;
+	 		}
+	 	}
+	 }*/
+	 /*else if (-1.0 > m)
+	 {
+	 	x = max(x_0, x_1);
+	 	y = min(y_0, y_1);
+	 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
+	 	for (; y < max(y_0, y_1); y++)
+	 	{
+	 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
+	 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
+	 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
+	 		if (d <= 0)
+	 		{ //choose N
+	 			d += 2 * abs(x_1 - x_0);
+	 		}
+	 		else
+	 		{ // choose NW
+	 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
+	 			x--;
 
-	// 			if(x < 0){
-	// 				break;
-	// 			}
-	// 		}
-	// 	}
-	// }
+	 			if(x < 0){
+	 				break;
+	 			}
+	 		}
+	 	}
+	 }*/
 	if(0<m && m<=1){
-	    cout<<m<<endl;
-	    double y=y_0;
-	    double d = 2*(y_1-y_0)+(x_1-x_0);
-	    Color* c = &c_0;
-	    Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
-	    for(int x = x_0; x<x_1;x++){
-	        draw(x,y,c, camera);
-	        if(d<0){
-	            y=y+1;
-				if(y >= camera->verRes){
-					break;
-				}
-	            d+=2*((y_0-y_1)+(x_1-x_0));
-	        }else{
-	            d+=2*(y_0-y_1);
-	        }
-	        c=addColor(c,dc);
+	    cout<<x_0<<y_0<<x_1<<y_1<<endl;
+	    cout <<"deneme"<<endl;
+	    if(x_1>=x_0){
+            y=y_0;
+            d = 2*(y_0-y_1)+(x_1-x_0);
+            Color* c = &c_0;
+            Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+            for(x=x_0; x<x_1;x++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    y=y+1;
+                    d+=2*((y_0-y_1)+(x_1-x_0));
+                }else{
+                    d+=2*(y_0-y_1);
+                }
+                c=addColor(c,dc);
+            }
 	    }
+	    else{
+            y=y_1;
+            d = 2*(y_1-y_0)+(x_0-x_1);
+            Color* c = &c_1;
+            Color* dc = divColor(subColor(&c_0,&c_1),(x_0-x_1)) ;
+            for(x=x_1; x<x_0;x++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    y=y+1;
+                    d+=2*((y_1-y_0)+(x_0-x_1));
+                }else{
+                    d+=2*(y_1-y_0);
+                }
+                c=addColor(c,dc);
+            }
+
+        }
+
 	}
 	else if(m>1){
-	    cout<<m<<endl;
-	    //change x and y
-	    double x=x_0;
-	    double d = 2*(x_1-x_0)+(y_1-y_0);
-	    Color* c = &c_0;
-	    Color* dc = divColor(subColor(&c_1,&c_0),(y_1-y_0)) ;
-	    for(int y = y_0; y<y_1;y++){
-	        draw(x,y,c, camera);
-	        if(d<0){
-	            x=x+1;
-				if(x >= camera->horRes){
-					break;
-				}
-	            d+=2*((x_0-x_1)+(y_1-y_0));
-	        }else{
-	            d+=2*(x_0-x_1);
-	        }
-	        c=addColor(c,dc);
+	    if(y_1>=y_0){
+            cout<<m<<endl;
+            //change x and y
+            double x=x_0;
+            double d = 2*(x_1-x_0)+(y_1-y_0);
+            Color* c = &c_0;
+            Color* dc = divColor(subColor(&c_1,&c_0),(y_1-y_0)) ;
+            for(int y = y_0; y<y_1;y++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    x=x+1;
+                    if(x >= camera->horRes){
+                        break;
+                    }
+                    d+=2*((x_0-x_1)+(y_1-y_0));
+                }else{
+                    d+=2*(x_0-x_1);
+                }
+                c=addColor(c,dc);
+            }
 	    }
+	    else{
+            cout<<m<<endl;
+            //change x and y
+            double x=x_1;
+            double d = 2*(x_0-x_1)+(y_0-y_1);
+            Color* c = &c_1;
+            Color* dc = divColor(subColor(&c_0,&c_1),(y_0-y_1)) ;
+            for(int y = y_1; y<y_0;y++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    x=x+1;
+                    if(x >= camera->horRes){
+                        break;
+                    }
+                    d+=2*((x_1-x_0)+(y_0-y_1));
+                }else{
+                    d+=2*(x_1-x_0);
+                }
+                c=addColor(c,dc);
+            }
+
+        }
+
 	}
 	else if(-1<=m && m<0){
-        cout<<m<<endl;
-        double y=y_1;
-        double d = 2*abs(y_1-y_0)+abs(x_1-x_0);
-        Color* c = &c_0;
-        Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+        if(x_1>=x_0){
+            y=y_0;
+            d = 2*(y_0-y_1)-(x_1-x_0);
+            Color* c = &c_0;
+            Color* dc = divColor(subColor(&c_1,&c_0),(x_1-x_0)) ;
+            for(x=x_0; x<x_1;x++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    d+=2*(y_0-y_1);
+                }else{
 
-        for(int x = x_1; x<x_0;x++){
-            draw(x,y,c, camera);
-            if(d<0){
-                y=y-1;
-				if(y < 0)break;
-
-                d+=2*(abs(y_0-y_1)+abs(x_1-x_0));
-            }else{
-                d+=2*abs(y_0-y_1);
+                    y=y-1;
+                    d+=2*((y_0-y_1)-(x_1-x_0));
+                }
+                c=addColor(c,dc);
             }
-            c=addColor(c,dc);
+        }
+        else{
+            y=y_1;
+            d = 2*(y_1-y_0)-(x_0-x_1);
+            Color* c = &c_1;
+            Color* dc = divColor(subColor(&c_0,&c_1),(x_0-x_1)) ;
+            for(x=x_1; x<x_0;x++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    d+=2*(y_1-y_0);
+                }else{
+
+                    y=y-1;
+                    d+=2*((y_1-y_0)-(x_0-x_1));
+                }
+                c=addColor(c,dc);
+            }
+
         }
     }
 	else if (-1.0 > m)
 	{
-		x = max(x_0, x_1);
-		y = min(y_0, y_1);
-		d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
-		for (; y < max(y_0, y_1); y++)
-		{
-			image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
-			image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
-			image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
-			if (d <= 0)
-			{ //choose N
-				d += 2 * abs(x_1 - x_0);
-			}
-			else
-			{ // choose NW
-				d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
-				x--;
+        if(y_1>=y_0){
+            x=x_0;
+            d = 2*(x_0-x_1)-(y_1-y_0);
+            Color* c = &c_0;
+            Color* dc = divColor(subColor(&c_1,&c_0),(y_1-y_0)) ;
+            for(y=y_0; y<y_1;y++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    d+=2*(x_0-x_1);
+                }else{
 
-				if(x < 0){
-					break;
-				}
-			}
-		}
+                    x=x-1;
+                    d+=2*((x_0-x_1)-(y_1-y_0));
+                }
+                c=addColor(c,dc);
+            }
+        }
+
+        else{
+            x=x_1;
+            d = 2*(x_1-x_0)-(y_0-y_1);
+            Color* c = &c_1;
+            Color* dc = divColor(subColor(&c_0,&c_1),(y_0-y_1)) ;
+            for(y=y_1; y<y_0;y++){
+                draw(x,y,c, camera);
+                if(d<0){
+                    d+=2*(x_1-x_0);
+                }else{
+
+                    x=x-1;
+                    d+=2*((x_1-x_0)-(y_0-y_1));
+                }
+                c=addColor(c,dc);
+            }
+
+        }
 	}
 }
 
@@ -436,7 +510,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				cout <<"[CLIPPING DONE]"<< endl;
 
 				cout << "line count: " << mesh->lines.size() << endl;
-				rasterization(mesh, camera);
+
 			}
 
 			else // solid mode
@@ -479,10 +553,26 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				}
 			}
 
+
+
 			// do BFC
 			// add to list if visible.
 		}
+
+        rasterization(&mesh[i],camera);
+		if(mesh->type==0){
+		    while(mesh->lines.size()>0){
+		        mesh->lines.pop_back();
+		    }
+
+		}else{
+		    while(mesh->vertexDataCopy.size()>0){
+		        mesh->lines.pop_back();
+		    }
+
+		}
 	}
+
 
 }
 
