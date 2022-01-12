@@ -114,7 +114,6 @@ void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, do
 	}
 	else if(m>1){
 	    if(y_1>=y_0){
-            cout<<m<<endl;
             //change x and y
             double x=x_0;
             double d = 2*(x_1-x_0)+(y_1-y_0);
@@ -135,7 +134,7 @@ void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, do
             }
 	    }
 	    else{
-            cout<<m<<endl;
+
             //change x and y
             double x=x_1;
             double d = 2*(x_0-x_1)+(y_0-y_1);
@@ -455,22 +454,11 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				Vec4 v1(v1data);
 				Vec4 v2(v2data);
 				Vec4 v3(v3data);
-				// if(mesh->meshId == 3){
-				// 	cout <<"BEfore anything" << endl;
-				// 	cout << "v1: " << v1 << endl;
-				// 	cout << "v2: " << v2 << endl;
-				// 	cout << "v3: " << v3 << endl;
-				// 	cout << mesh->modelM << endl;
-				// }
+		
 				v1 = multiplyMatrixWithVec4(mesh->modelM, v1);
 				v2 = multiplyMatrixWithVec4(mesh->modelM, v2);
 				v3 = multiplyMatrixWithVec4(mesh->modelM, v3);
-				// if(mesh->meshId == 3){
-				// 	cout <<"After trasnformation" << endl;
-				// 	cout << "v1: " << v1 << endl;
-				// 	cout << "v2: " << v2 << endl;
-				// 	cout << "v3: " << v3 << endl;
-				// }
+			
 				if(this->cullingEnabled){
 					// Backface culling
 
@@ -508,12 +496,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				v1 = multiplyMatrixWithVec4(MprojMcam, v1);
 				v2 = multiplyMatrixWithVec4(MprojMcam, v2);
 				v3 = multiplyMatrixWithVec4(MprojMcam, v3);
-				// if(mesh->meshId == 3){
-				// 	cout <<"BEfore Pers div" << endl;
-				// 	cout << "v1: " << v1 << endl;
-				// 	cout << "v2: " << v2 << endl;
-				// 	cout << "v3: " << v3 << endl;
-				// }
+		
 				if (camera->projectionType == 1)
 				{
 					// perspective cam, do perspective divide
@@ -546,12 +529,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 					v3.t = 1.0;
 				}
 
-				// if(mesh->meshId == 3){
-				// 	cout <<"BEfore MVp mult" << endl;
-				// 	cout << "v1: " << v1 << endl;
-				// 	cout << "v2: " << v2 << endl;
-				// 	cout << "v3: " << v3 << endl;
-				// }
+			
 				// complete transformations by multiplying with M_viewport
 				v1 = multiplyMatrixWithVec4(Mvp, v1);
 				v2 = multiplyMatrixWithVec4(Mvp, v2);
@@ -560,13 +538,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				mesh->vertexDataCopy.push_back(v1);
 				mesh->vertexDataCopy.push_back(v2);
 				mesh->vertexDataCopy.push_back(v3);
-				// if(mesh->meshId == 3){
-				// 	cout <<"AFTER MVp mult" << endl;
-
-				// 	cout << "v1: " << v1 << endl;
-				// 	cout << "v2: " << v2 << endl;
-				// 	cout << "v3: " << v3 << endl;
-				// }
+		
 
 			}
 

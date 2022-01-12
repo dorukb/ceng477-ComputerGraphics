@@ -104,9 +104,6 @@ Matrix4 Matrix4::GetMcam(Camera *cam)
     Mcam.val[2][2] = w.z;
     Mcam.val[2][3] = -(w.x*cpos.x + w.y*cpos.y + w.z*cpos.z);
 
-    // this->val[3][0] = 0.0;
-    // this->val[3][1] = 0.0;
-    // this->val[3][2] = 0.0;
     Mcam.val[3][3] = 1.0;
     return Mcam;
 }
@@ -175,7 +172,6 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
 
     if(u.x == 0.0 && u.y == 0.0 && u.z != 0.0){
         // rot around Z
-        cout <<"rot around Z" <<endl;
 
         Matrix4 rotAroundZ;
         double theta = (rot->angle* M_PI)/180.0;
@@ -192,7 +188,7 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
     }
     else if(u.x == 0.0 && u.z == 0.0 && u.y != 0.0){
         // rot around y
-        cout <<"rot around Y" <<endl;
+        // cout <<"rot around Y" <<endl;
 
         Matrix4 rotAroundY;
         double theta = (rot->angle* M_PI)/180.0;
@@ -209,7 +205,7 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
     }
     else if(u.z == 0.0 && u.y == 0.0 && u.x !=0.0){
         // rot around x
-        cout <<"rot around X" <<endl;
+        // cout <<"rot around X" <<endl;
         Matrix4 rotAroundX;
         double theta = (rot->angle* M_PI)/180.0;
 
@@ -264,7 +260,7 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
 // Step 2)  w = u x v
 
     Vec3 w = crossProductVec3(u, v);
-    cout << "w:" << w << endl;
+    // cout << "w:" << w << endl;
 // Step 3) Normalize v and w
 
     v = normalizeVec3(v);   
@@ -305,23 +301,19 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
     for(int i =0; i < 4; i++){
         for(int j = 0; j < 4; j++){
             if(rotm.val[i][j] == -0.0){
-                cout << "rotm minus zero problem solved at i: " << i << " j: " << j << endl;
+                // cout << "rotm minus zero problem solved at i: " << i << " j: " << j << endl;
                 rotm.val[i][j]  = 0.0;
             }
             if(mInv.val[i][j] == -0.0){
-                cout << "minv minus zero problem 2 solved\n";
+                // cout << "minv minus zero problem 2 solved\n";
                 mInv.val[i][j]  = 0.0;
             }
         }
     }
-    cout << "mInv" << mInv << endl;
-    cout << "rotm: " << rotm << endl;
 
     Matrix4 m = GetTranspose(mInv);
 
-    cout << "m: " << m << endl;
     Matrix4 temp = multiplyMatrixWithMatrix(rotm, m);
-    cout << "Temp: " << temp << endl;
     Matrix4 result = multiplyMatrixWithMatrix(mInv, temp);
     
     return result;
