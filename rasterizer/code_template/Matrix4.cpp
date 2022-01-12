@@ -170,28 +170,101 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
 // value then v = (-b, a, 0)
     Vec3 v;
     
+
+    // handle rot around major axes differently.
+
+    if(u.x == 0.0 && u.y == 0.0 && u.z != 0.0){
+        // rot around Z
+        cout <<"rot around Z" <<endl;
+
+        Matrix4 rotAroundZ;
+        double theta = (rot->angle* M_PI)/180.0;
+
+        rotAroundZ.val[0][0] = cos(theta);
+        rotAroundZ.val[0][1] = -sin(theta);
+
+        rotAroundZ.val[1][0] = sin(theta);
+        rotAroundZ.val[1][1] = cos(theta);
+
+        rotAroundZ.val[2][2] = 1;
+        rotAroundZ.val[3][3] = 1;
+        return rotAroundZ;
+    }
+    else if(u.x == 0.0 && u.z == 0.0 && u.y != 0.0){
+        // rot around y
+        cout <<"rot around Y" <<endl;
+
+        Matrix4 rotAroundY;
+        double theta = (rot->angle* M_PI)/180.0;
+
+        rotAroundY.val[0][0] = cos(theta);
+        rotAroundY.val[0][2] = sin(theta);
+
+        rotAroundY.val[1][1] = 1;
+
+        rotAroundY.val[2][0] = -sin(theta);
+        rotAroundY.val[2][2] = cos(theta);
+        rotAroundY.val[3][3] = 1;
+        return rotAroundY;
+    }
+    else if(u.z == 0.0 && u.y == 0.0 && u.x !=0.0){
+        // rot around x
+        cout <<"rot around X" <<endl;
+        Matrix4 rotAroundX;
+        double theta = (rot->angle* M_PI)/180.0;
+
+        rotAroundX.val[0][0] = 1;
+
+        rotAroundX.val[1][1] = cos(theta);
+        rotAroundX.val[1][2] = -sin(theta);
+
+        rotAroundX.val[2][1] = sin(theta);
+        rotAroundX.val[2][2] = cos(theta);
+        rotAroundX.val[3][3] = 1;
+        return rotAroundX;
+    }
     if(u.x < u.y && u.x < u.z){
         // ux is the smallest;
         v.x = 0;
-        v.y = -u.z;
+        if(ABS(u.z - 0.000000) < EPSILON){
+            v.y = 0;
+        }
+        else{
+            v.y = -u.z;
+        }
         v.z =  u.y;
     }
     else if(u.y < u.x && u.y < u.z){
         // uy is smallest
         v.y = 0;
-        v.x = -u.z;
+        if(ABS(u.z - 0.000000) < EPSILON){
+            v.x = 0;
+        }
+        else{
+            v.x = -u.z;
+        }
+        // v.x = -u.z;
         v.z = u.x;
     }
     else{
         // uz is smallest
         v.z = 0;
-        v.x = -u.y;
+
+        if(ABS(u.y - 0.000000) < EPSILON){
+            v.x = 0;
+        }
+        else{
+            v.x = -u.y;
+        }
+        // v.x = -u.y;
         v.y = u.x;
     }
 
 
 // Step 2)  w = u x v
+
     Vec3 w = crossProductVec3(u, v);
+    cout << "w:" << w << endl;
 // Step 3) Normalize v and w
 
     v = normalizeVec3(v);   
@@ -203,51 +276,52 @@ Matrix4 Matrix4::GetRotationMatrix(Rotation *rot)
     mInv.val[0][0] = u.x;
     mInv.val[0][1] = v.x;
     mInv.val[0][2] = w.x;
-    mInv.val[0][3] = 0;
 
     mInv.val[1][0] = u.y;
     mInv.val[1][1] = v.y;
     mInv.val[1][2] = w.y;
-    mInv.val[1][3] = 0;
 
     // third row
     mInv.val[2][0] = u.z;
     mInv.val[2][1] = v.z;
     mInv.val[2][2] = w.z;
-    mInv.val[2][3] = 0;
 
-    mInv.val[3][0] = 0;
-    mInv.val[3][1] = 0;
-    mInv.val[3][2] = 0;
     mInv.val[3][3] = 1;
-
-    Matrix4 m = GetTranspose(mInv);
 
     // Final rot trans is: Minv * Rx(theta) * M
     double theta = (rot->angle* M_PI)/180.0;
-    Matrix4 rxTheta;
+    Matrix4 rotm;
 
-    rxTheta.val[0][0] = 1.0;
-    rxTheta.val[0][1] = 0.0;
-    rxTheta.val[0][2] = 0.0;
-    rxTheta.val[0][3] = 0.0;
+    rotm.val[0][0] = 1.0;
 
-    rxTheta.val[1][0] = 0.0;
-    rxTheta.val[1][1] = cos(theta);
-    rxTheta.val[1][2] = (-1.0)*sin(theta);
-    rxTheta.val[1][3] = 0.0;
+    rotm.val[1][1] = cos(theta);
+    rotm.val[1][2] = (-1.0)*sin(theta);
 
-    rxTheta.val[2][0] = 0.0;
-    rxTheta.val[2][1] = sin(theta);
-    rxTheta.val[2][2] = cos(theta);
-    rxTheta.val[2][3] = 0.0;
+    rotm.val[2][1] = sin(theta);
+    rotm.val[2][2] = cos(theta);
 
-    rxTheta.val[3][0] = 0.0;
-    rxTheta.val[3][1] = 0.0;
-    rxTheta.val[3][2] = 0.0;
-    rxTheta.val[3][3] = 1.0;
+    rotm.val[3][3] = 1.0;
 
-    Matrix4 temp = multiplyMatrixWithMatrix(rxTheta, m);
+    for(int i =0; i < 4; i++){
+        for(int j = 0; j < 4; j++){
+            if(rotm.val[i][j] == -0.0){
+                cout << "rotm minus zero problem solved at i: " << i << " j: " << j << endl;
+                rotm.val[i][j]  = 0.0;
+            }
+            if(mInv.val[i][j] == -0.0){
+                cout << "minv minus zero problem 2 solved\n";
+                mInv.val[i][j]  = 0.0;
+            }
+        }
+    }
+    cout << "mInv" << mInv << endl;
+    cout << "rotm: " << rotm << endl;
+
+    Matrix4 m = GetTranspose(mInv);
+
+    cout << "m: " << m << endl;
+    Matrix4 temp = multiplyMatrixWithMatrix(rotm, m);
+    cout << "Temp: " << temp << endl;
     Matrix4 result = multiplyMatrixWithMatrix(mInv, temp);
     
     return result;
