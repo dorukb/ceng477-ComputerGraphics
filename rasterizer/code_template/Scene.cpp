@@ -74,106 +74,6 @@ void Scene::midpoint_algorithm(double x_0, double y_0, Color c_0, double x_1, do
 	{
 		return;
 	}
-/*
-	cout <<"BEFORE IMAGE" << "maxx: " << testx << " maxY: " << testy << " xmin: "<< x << " ymin: "<<y <<" m: " <<m<<endl;
-	 if (0.0 < m && m < 1.0)
-	 {
-	 	x = min(x_0, x_1);
-	 	y = min(y_0, y_1);
-
-	 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
-
-	 	for (; x < max(x_0, x_1); x++)
-	 	{
-	 		draw(x,y,0, camera);
-	 		// image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
-	 		// image[x][y].g = 0; // (double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
-	 		// image[x][y].b = 0; // (double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
-	 		if (d <= 0)
-	 		{ //choose E
-	 			d += 2 * abs(y_1 - y_0);
-	 		}
-	 		else
-	 		{ //choose NE
-	 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
-	 			y++;
-	 			if(y >= 700)break;
-	 		}
-	 	}
-	 }*/
-	/* if (1.0 <= m)
-	 {
-	 	x = min(x_0, x_1);
-	 	y = min(y_0, y_1);
-	 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
-
-	 	for (; y < max(y_0, y_1); y++)
-	 	{
-	 		 draw(x,y,0, camera);
-
-	// 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
-	// 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
-	// 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
-	 		if (d <= 0)
-	 		{ //choose N
-	 			d += 2 * abs(x_1 - x_0);
-	 		}
-	 		else
-	 		{ //choose NE
-	 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
-	 			x++;
-	 			if(x>=700)break;
-	 		}
-	 	}
-	 }*/
-	 /*else if (m <= 0 && m >= -1.0)
-	 {
-	 	x = min(x_0, x_1);
-	 	y = max(y_0, y_1);
-
-	 	d = 2 * abs(y_1 - y_0) - abs(x_1 - x_0);
-	 	for (; x < max(x_0, x_1); x++)
-	 	{
-	 		image[x][y].r = 0; //(double)(c_0.r*abs(x-x_1) + c_1.r*abs(x_0-x))/(double)alpha;
-	 		image[x][y].g = 0; //(double)(c_0.g*abs(x-x_1) + c_1.g*abs(x_0-x))/(double)alpha;
-	 		image[x][y].b = 0; //(double)(c_0.b*abs(x-x_1) + c_1.b*abs(x_0-x))/(double)alpha; // draw(x,y)
-	 		if (d <= 0)
-	 		{ //choose W
-	 			d += 2 * abs(y_1 - y_0);
-	 		}
-	 		else
-	 		{ //choose NW
-	 			d += 2 * (abs(y_1 - y_0) - abs(x_1 - x_0));
-	 			y--;
-	 			if(y<0)break;
-	 		}
-	 	}
-	 }*/
-	 /*else if (-1.0 > m)
-	 {
-	 	x = max(x_0, x_1);
-	 	y = min(y_0, y_1);
-	 	d = 2 * abs(x_1 - x_0) - abs(y_1 - y_0);
-	 	for (; y < max(y_0, y_1); y++)
-	 	{
-	 		image[x][y].r = 0; //(double)(c_0.r*abs(y-y_1) + c_1.r*abs(y_0-y))/(double)abs(y_1-y_0);
-	 		image[x][y].g = 0; //(double)(c_0.g*abs(y-y_1) + c_1.g*abs(y_0-y))/(double)abs(y_1-y_0);
-	 		image[x][y].b = 0; //(double)(c_0.b*abs(y-y_1) + c_1.b*abs(y_0-y))/(double)abs(y_1-y_0); // draw(x,y)
-	 		if (d <= 0)
-	 		{ //choose N
-	 			d += 2 * abs(x_1 - x_0);
-	 		}
-	 		else
-	 		{ // choose NW
-	 			d += 2 * (abs(x_1 - x_0) - abs(y_1 - y_0));
-	 			x--;
-
-	 			if(x < 0){
-	 				break;
-	 			}
-	 		}
-	 	}
-	 }*/
 	if(0<m && m<=1){
 	    if(x_1>=x_0){
             y=y_0;
@@ -346,12 +246,10 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 		Color *c_0;
 		Color *c_1;
 		Color *c_2;
-		int numberOfTriangles = object->numberOfTriangles;
-
 
 		int numOfVert = object->vertexDataCopy.size();
 
-		for (int i = 0; i < numOfVert-2; i++)
+		for (int i = 0; i < numOfVert-2; i += 3)
 		{
 			//
 			// int v0_id = object->triangles[i].getFirstVertexId() - 1;
@@ -359,20 +257,20 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 			// int v2_id = object->triangles[i].getThirdVertexId() - 1;
 
 
-			int c0_id = (object->vertexDataCopy[3*i].colorId) - 1;
-			int c1_id = (object->vertexDataCopy[3*i+1].colorId) - 1;
-			int c2_id = (object->vertexDataCopy[3*i+2].colorId) - 1;
+			int c0_id = (object->vertexDataCopy[i].colorId) - 1;
+			int c1_id = (object->vertexDataCopy[i+1].colorId) - 1;
+			int c2_id = (object->vertexDataCopy[i+2].colorId) - 1;
 
-			double x_0 = object->vertexDataCopy[3*i].x;
-			double y_0 = object->vertexDataCopy[3*i].y;
+			double x_0 = object->vertexDataCopy[i].x;
+			double y_0 = object->vertexDataCopy[i].y;
 			c_0 = colorsOfVertices[c0_id];
 
-			double x_1 = object->vertexDataCopy[3*i+1].x;
-			double y_1 = object->vertexDataCopy[3*i+1].y;
+			double x_1 = object->vertexDataCopy[i+1].x;
+			double y_1 = object->vertexDataCopy[i+1].y;
 			c_1 = colorsOfVertices[c1_id];
 
-			double x_2 = object->vertexDataCopy[3*i+2].x;
-			double y_2 = object->vertexDataCopy[3*i+2].x;
+			double x_2 = object->vertexDataCopy[i+2].x;
+			double y_2 = object->vertexDataCopy[i+2].y;
 			c_2 = colorsOfVertices[c2_id];
 
 			double y_min = min(y_0, min(y_1, y_2));
@@ -389,12 +287,11 @@ void Scene::rasterization(Mesh *object, Camera *camera)
 					beta = f20(x, y, x_2, x_0, y_2, y_0) / f20(x_1, y_1, x_2, x_0, y_2, y_0);
 					gama = f01(x, y, x_0, x_1, y_0, y_1) / f01(x_2, y_2, x_0, x_1, y_0, y_1);
 
-					if (alpha >= 0 && beta >= 0 && gama >= 0 && i < 4)
+					if (alpha >= 0 && beta >= 0 && gama >= 0)
 					{
 						c = addColor(addColor(multColor(c_0,alpha),multColor(c_1,beta)),multColor(c_2,gama));
 						draw(x,y,c, camera);
 					}
-					std::cout << "triangle3 :" << i << endl;
 				}
 			}
 		}
@@ -474,6 +371,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		Matrix4 MprojMcamMmodel = multiplyMatrixWithMatrix(Mproj, McamMmodel);
 		// only M_vp mulp is left, do that after perspective divide if cam is perspective.
 
+		Matrix4 MprojMcam = multiplyMatrixWithMatrix(Mproj, Mcam);
 		for (auto tri : mesh->triangles)
 		{
 			if (mesh->type == 0) // Wireframe mode
@@ -483,22 +381,66 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				Vec3 *v3data = vertices[tri.getThirdVertexId() - 1];
 
 				// do also BFC here??
-				// calculate normal
-				Vec3 ab, ac, n;
-				ab = subtractVec3(*v2data, *v1data);
-				ac = subtractVec3(*v3data, *v1data);
-				n = crossProductVec3(ab, ac);
-				n = normalizeVec3(n);
 
 				// Adds w component, convert to homogenous coords.
 				Vec4 v1(v1data);
 				Vec4 v2(v2data);
 				Vec4 v3(v3data);
 
-				// apply the transformation
-				v1 = multiplyMatrixWithVec4(MprojMcamMmodel, v1);
-				v2 = multiplyMatrixWithVec4(MprojMcamMmodel, v2);
-				v3 = multiplyMatrixWithVec4(MprojMcamMmodel, v3);
+				// // apply the transformation
+				// v1 = multiplyMatrixWithVec4(MprojMcamMmodel, v1);
+				// v2 = multiplyMatrixWithVec4(MprojMcamMmodel, v2);
+				// v3 = multiplyMatrixWithVec4(MprojMcamMmodel, v3);
+				// Apply modelling trasnform
+
+				v1 = multiplyMatrixWithVec4(mesh->modelM, v1);
+				v2 = multiplyMatrixWithVec4(mesh->modelM, v2);
+				v3 = multiplyMatrixWithVec4(mesh->modelM, v3);
+
+				if(this->cullingEnabled){
+					// Backface culling
+
+					// calculate normal
+					Vec3 ab, ac, n;
+					
+					Vec3 a,b,c;
+					a.x = v1.x;
+					a.y = v1.y;
+					a.z = v1.z;
+
+					b.x = v2.x;
+					b.y = v2.y;
+					b.z = v2.z;
+					c.x = v3.x;
+					c.y = v3.y;
+					c.z =v3.z;
+
+					ab = subtractVec3(b, a);
+					ac = subtractVec3(c, a);
+					n = crossProductVec3(ab, ac);
+					n = normalizeVec3(n);
+
+					Vec3 midpoint;
+					midpoint.x = (v1.x + v2.x + v3.x)/3.0;
+					midpoint.y = (v1.y + v2.y + v3.y)/3.0;
+					midpoint.z = (v1.z + v2.z + v3.z)/3.0;
+
+					// Vec3 v1test;
+					// v1test.x = v1.x;
+					// v1test.y = v1.y;
+					// v1test.z = v1.z;
+
+					Vec3 camToMidpoint = subtractVec3(midpoint, camera->pos);
+					if(dotProductVec3(n, camToMidpoint) >= 0){
+						// cull this;
+						continue;
+                	}
+				}
+
+				v1 = multiplyMatrixWithVec4(MprojMcam, v1);
+				v2 = multiplyMatrixWithVec4(MprojMcam, v2);
+				v3 = multiplyMatrixWithVec4(MprojMcam, v3);
+
 				Mesh::Line line1(&v1, &v2); // formed by: v1 and v2
 				Mesh::Line line2(&v1, &v3); // formed by: v1 and v3
 				Mesh::Line line3(&v2, &v3); // formed by: v2 and v3
@@ -519,38 +461,121 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 				// transform all vertices, no need to form lines. keep the same triangle structure.
 				// just copy vertex data.
-				for (int j = 0; j < 4; j++)
-				{
-					int ind = tri.vertexIds[j];
-					Vec3 *data = vertices[ind - 1];
-					Vec4 vert;
-					vert.x = data->x;
-					vert.y = data->y;
-					vert.z = data->z;
-					vert.t = 1.0; // homogenous w coord.
-					vert.colorId = data->colorId;
+				Vec3 *v1data = vertices[tri.getFirstVertexId() - 1];
+				Vec3 *v2data = vertices[tri.getSecondVertexId() - 1];
+				Vec3 *v3data = vertices[tri.getThirdVertexId() - 1];
 
-					Vec4 transedVert = multiplyMatrixWithVec4(MprojMcamMmodel, vert);
+				Vec4 v1(v1data);
+				Vec4 v2(v2data);
+				Vec4 v3(v3data);
 
-					if (camera->projectionType == 1)
-					{
-						// perspective cam, do perspective divide
-						transedVert.x /= transedVert.t;
-						transedVert.y /= transedVert.t;
-						transedVert.z /= transedVert.t;
-						transedVert.t = 1.0;
-					}
+				v1 = multiplyMatrixWithVec4(mesh->modelM, v1);
+				v2 = multiplyMatrixWithVec4(mesh->modelM, v2);
+				v3 = multiplyMatrixWithVec4(mesh->modelM, v3);
 
-					// complete transformations by multiplying with M_viewport
-					Vec4 finalVert = multiplyMatrixWithVec4(Mvp, transedVert);
+				if(this->cullingEnabled){
+					// Backface culling
 
-					// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
-					mesh->vertexDataCopy.push_back(finalVert);
+					// calculate normal
+					Vec3 ab, ac, n;
+					
+					Vec3 a,b,c;
+					a.x = v1.x;
+					a.y = v1.y;
+					a.z = v1.z;
 
-					// but we will drop entire triangles, vertices during clipping? the list will get broken...
-					// need to delete the copies of deleted vertices aswell. vector will "move them down" to correct positions after erase...
-					// vec.erase( vec.begin() + 3 ); exp code to use for deletion.
+					b.x = v2.x;
+					b.y = v2.y;
+					b.z = v2.z;
+					c.x = v3.x;
+					c.y = v3.y;
+					c.z =v3.z;
+
+					ab = subtractVec3(b, a);
+					ac = subtractVec3(c, a);
+					n = crossProductVec3(ab, ac);
+					n = normalizeVec3(n);
+
+					Vec3 midpoint;
+					midpoint.x = (v1.x + v2.x + v3.x)/3.0;
+					midpoint.y = (v1.y + v2.y + v3.y)/3.0;
+					midpoint.z = (v1.z + v2.z + v3.z)/3.0;
+
+					// Vec3 v1test;
+					// v1test.x = v1.x;
+					// v1test.y = v1.y;
+					// v1test.z = v1.z;
+
+					Vec3 camToMidpoint = subtractVec3(midpoint, camera->pos);
+					if(dotProductVec3(n, camToMidpoint) >= 0){
+						// cull this;
+						continue;
+                	}
 				}
+				v1 = multiplyMatrixWithVec4(MprojMcam, v1);
+				v2 = multiplyMatrixWithVec4(MprojMcam, v2);
+				v3 = multiplyMatrixWithVec4(MprojMcam, v3);
+				
+				if (camera->projectionType == 1)
+				{
+					// perspective cam, do perspective divide
+					v1.x /= v1.t;
+					v1.y /= v1.t;
+					v1.z /= v1.t;
+					v1.t = 1.0;
+
+					v2.x /= v2.t;
+					v2.y /= v2.t;
+					v2.z /= v2.t;
+					v2.t = 1.0;
+
+					v3.x /= v3.t;
+					v3.y /= v3.t;
+					v3.z /= v3.t;
+					v3.t = 1.0;
+				}
+
+				// complete transformations by multiplying with M_viewport
+				v1 = multiplyMatrixWithVec4(Mvp, v1);
+				v2 = multiplyMatrixWithVec4(Mvp, v2);
+				v3 = multiplyMatrixWithVec4(Mvp, v3);
+					// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
+				mesh->vertexDataCopy.push_back(v1);
+				mesh->vertexDataCopy.push_back(v2);
+				mesh->vertexDataCopy.push_back(v3);
+
+				// for (int j = 0; j < 3; j++)
+				// {
+				// 	int ind = tri.vertexIds[j];
+				// 	Vec3 *data = vertices[ind - 1];
+				// 	Vec4 vert;
+				// 	vert.x = data->x;
+				// 	vert.y = data->y;
+				// 	vert.z = data->z;
+				// 	vert.t = 1.0; // homogenous w coord.
+				// 	vert.colorId = data->colorId;
+
+				// 	Vec4 transedVert = multiplyMatrixWithVec4(MprojMcamMmodel, vert);
+
+				// 	if (camera->projectionType == 1)
+				// 	{
+				// 		// perspective cam, do perspective divide
+				// 		transedVert.x /= transedVert.t;
+				// 		transedVert.y /= transedVert.t;
+				// 		transedVert.z /= transedVert.t;
+				// 		transedVert.t = 1.0;
+				// 	}
+
+				// 	// complete transformations by multiplying with M_viewport
+				// 	Vec4 finalVert = multiplyMatrixWithVec4(Mvp, transedVert);
+
+				// 	// given that we traverse the triangles list in the same order, we can reliably get correct vertex data by indexing without vertex ids.
+				// 	mesh->vertexDataCopy.push_back(finalVert);
+
+				// 	// but we will drop entire triangles, vertices during clipping? the list will get broken...
+				// 	// need to delete the copies of deleted vertices aswell. vector will "move them down" to correct positions after erase...
+				// 	// vec.erase( vec.begin() + 3 ); exp code to use for deletion.
+				// }
 			}
 
 
@@ -561,15 +586,16 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
         rasterization(&mesh[i],camera);
 		if(mesh->type==0){
-		    while(mesh->lines.size()>0){
-		        mesh->lines.pop_back();
-		    }
+			mesh->lines.clear();
+		    // while(mesh->lines.size()>0){
+		    //     mesh->lines.pop_back();
+		    // }
 
 		}else{
-		    while(mesh->vertexDataCopy.size()>0){
-		        mesh->lines.pop_back();
-		    }
-
+			mesh->vertexDataCopy.clear();
+		    // while(mesh->vertexDataCopy.size()>0){
+		    //     mesh->lines.pop_back();
+		    // }
 		}
 	}
 
