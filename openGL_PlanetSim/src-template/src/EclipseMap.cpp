@@ -5,6 +5,8 @@ using namespace std;
 /* Geometry variables */
 glm::mat4 MVP, M_model, M_view, M_projection;
 
+glm::mat4 earthMVP, moonMVP;
+
 /* Uniform variable locations */
 int MVP_location, heightFactor_location, cameraPos_location, heightmap_location,
 texture_location, lightPos_location, textureOffset_location;
@@ -77,7 +79,7 @@ void EclipseMap::createMoonVertices() {
                           glm::normalize(glm::vec3(x/moonRadius, y/moonRadius, z/moonRadius)), 
                           glm::vec2(u, v));
             
-            glm::mat4 Ty = glm :: translate(glm::mat4(1.0f),glm::vec3(0.0f,2660.0f,0.0f));
+            glm::mat4 Ty = glm :: translate(glm::mat4(1.0f),glm::vec3(0.0f,2600.0f,0.0f));
             glm::vec4 temp = Ty *glm::vec4 (vertex.position.x,vertex.position.y,vertex.position.z,1.0f);
             vertex.position = glm::vec3(temp.x,temp.y,temp.z);
 
@@ -135,6 +137,9 @@ void EclipseMap::createSphereIndices() {
 
 void EclipseMap::setUniforms(GLuint worldShaderId, GLuint moonShaderId) {
 	/* Set the uniform variables so that our shaders can access them */
+
+    glUseProgram(worldShaderId);
+
 	MVP_location = glGetUniformLocation(worldShaderId, "MVP");
 	glUniformMatrix4fv(MVP_location, 1, GL_FALSE, glm::value_ptr(MVP));
 
@@ -149,6 +154,24 @@ void EclipseMap::setUniforms(GLuint worldShaderId, GLuint moonShaderId) {
 
 	lightPos_location = glGetUniformLocation(worldShaderId, "lightPosition");
 	glUniform3fv(lightPos_location, 1, glm::value_ptr(lightPos));
+
+
+    glUseProgram(moonShaderId);
+    MVP_location = glGetUniformLocation(moonShaderId, "MVP");
+	glUniformMatrix4fv(MVP_location, 1, GL_FALSE, glm::value_ptr(MVP));
+
+	heightFactor_location = glGetUniformLocation(moonShaderId, "heightFactor");
+	glUniform1f(heightFactor_location, heightFactor);
+
+	textureOffset_location = glGetUniformLocation(moonShaderId, "textureOffset");
+	glUniform1i(textureOffset_location, textureOffset);
+
+	cameraPos_location = glGetUniformLocation(moonShaderId, "cameraPosition");
+	glUniform3fv(cameraPos_location, 1, glm::value_ptr(cameraPosition));
+
+	lightPos_location = glGetUniformLocation(moonShaderId, "lightPosition");
+	glUniform3fv(lightPos_location, 1, glm::value_ptr(lightPos));
+
 
 	// heightmap_location = glGetUniformLocation(worldShaderId, "TexGrey");
 	// glUniform1i(heightmap_location, 0);
@@ -240,6 +263,8 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
+
+
     glUseProgram(worldShaderID);
 
 
@@ -247,6 +272,9 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
+
+    glm::mat4 earthModelMatrix(1.0f);
+    glm::mat4 moonAroundEarthModelMatrix(1.0f);
 
     // Main rendering loop
     do {
@@ -257,45 +285,68 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-
-
         // TODO: Handle key presses
         handleKeyPress(window);
+        updateCamera();
 
         // TODO: Manipulate rotation variables
         
         // TODO: Bind textures
-        // glUniform1i(glGetUniformLocation(worldShaderID, "TexColor"), 0);
 
         
         // TODO: Use moonShaderID program
-        // glClientActiveTexture(GL_TEXTURE0 + 1);
-        // glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glUseProgram(moonShaderID);
 
-		// glUniform1i(glGetUniformLocation(worldShaderID, "TexColor"), 1);
+        // 0.5/horizontalSplitCount
+        moonAroundEarthModelMatrix = glm::rotate(moonAroundEarthModelMatrix,glm::radians(-2.0f),glm::vec3(0,0,1));
+
+
+        // void Rotate(float x, float y, float z, bool localOrientation) 
+        // {
+        //     auto rotationMatrix = glm::rotate(x, glm::vec3(1,0,0));
+        //     rotationMatrix  *= glm::rotate(y, glm::vec3(0,1,0));
+        //     rotationMatrix  *= glm::rotate(z, glm::vec3(0,0,1));
+        //     if(localOrientation)
+        //         this->T = this->T * rotationMatrix;
+        //     else
+        //         this->T = rotationMatrix * this->T;
+        // }
+
+
+        moonMVP = M_projection * M_view * moonAroundEarthModelMatrix;
+        // glUniformMatrix4fv(glGetUniformLocation(moonShaderID,"moonMVP"),1,GL_FALSE,  glm::value_ptr(moonMVP));
+
+        glm::mat4 T = glm :: translate(glm::mat4(1.0f),glm::vec3(0.0f,-2600.0f,0.0f));
+        glm::mat4 Tinv = glm::inverse(T);
         
-        // TODO: Update camera at every frame
+        glm::mat4 rot = glm::rotate(moonAroundEarthModelMatrix,glm::radians(0.5f/horizontalSplitCount),glm::vec3(0,0,1));
+        moonAroundEarthModelMatrix = Tinv*rot*T * moonAroundEarthModelMatrix;
 
-        updateCamera();
+        glUniformMatrix4fv(glGetUniformLocation(moonShaderID,"moonMVP"),1,GL_FALSE,  glm::value_ptr(moonMVP));
+        // TODO: Update camera at every frame
+     
+        // Do not forget the update the uniforms of geometry too
+
         // TODO: Update uniform variables at every frame
         
-        // TODO: Bind moon vertex array        
+        // TODO: Bind moon vertex array     
+        
+        glBindVertexArray(moonVAO);   
+
+        // bind moon texture
+        glActiveTexture(GL_TEXTURE0+2);
+        glBindTexture(GL_TEXTURE_2D, moonTextureColor);
 
         // TODO: Draw moon object
+
+	    glDrawElements(GL_TRIANGLES, moonIndices.size(), GL_UNSIGNED_INT, nullptr);
         
         /*************************/
 
         // TODO: Use worldShaderID program
+        glUseProgram(worldShaderID);
         
         // TODO: Update camera at every frame
-
-        // TODO: Update uniform variables at every frame
-        
-        // TODO: Bind world vertex array
-        
-        // TODO: Draw world object
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-        /* Now render the frame */
         float pitchDiff =  pitch-startPitch;
         float yawDiff = yaw-startYaw;
 
@@ -311,19 +362,29 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         M_view = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp); // gluLookAt(eye, center, up)
         MVP = M_projection * M_view * M_model;
 
-        // Do not forget the update the uniforms of geometry too
+        // TODO: Update uniform variables at every frame
+
         glUniformMatrix4fv(MVP_location, 1, GL_FALSE, glm::value_ptr(MVP));
         glUniform3fv(cameraPos_location, 1, glm::value_ptr(cameraPosition));
         glUniform1f(heightFactor_location, heightFactor);
 
-        // std::cout<<"indices size: " << indices.size() << std::endl;
-        // draw earth
+
+        earthModelMatrix = glm::rotate(earthModelMatrix,glm::radians(0.5f),glm::vec3(0,0,1));
+        earthMVP = M_projection * M_view * earthModelMatrix;
+        glUniformMatrix4fv(glGetUniformLocation(worldShaderID,"earthMVP"),1,GL_FALSE,  glm::value_ptr(earthMVP));
+        
+        // TODO: Bind world vertex array
+
         glBindVertexArray(VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureColor);
+
+        // TODO: Draw world object
 	    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 
-        //draw moon
-        glBindVertexArray(moonVAO);
-	    glDrawElements(GL_TRIANGLES, moonIndices.size(), GL_UNSIGNED_INT, nullptr);
+        /* Now render the frame */
+    
+        // draw earth
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);

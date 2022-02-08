@@ -11,6 +11,7 @@ uniform mat4 ProjectionMatrix;
 uniform mat4 ViewMatrix;
 uniform mat4 NormalMatrix;
 uniform mat4 MVP;
+uniform mat4 earthMVP;
 
 uniform sampler2D TexColor;
 uniform sampler2D TexGrey;
@@ -30,18 +31,18 @@ out Data
 
 out vec3 LightVector;// Vector from Vertex to Light;
 out vec3 CameraVector;// Vector from Vertex to Camera;
-out vec3 vertexNormal;
 
 void main()
 {
     vec2 textureCoordinate = VertexTex;
     //textureCoordinate.x += textureOffset * (1.0 / 250.0);
-    vertexNormal = VertexNormal;
+
     //vec3 heightOffset = vertexNormal * get_height(textureCoordinate);
     vec3 calculated_pos = VertexPosition; // + heightOffset;
+
     CameraVector = normalize(cameraPosition - calculated_pos);
     LightVector = normalize(lightPosition - calculated_pos);
-    gl_Position = MVP * vec4(calculated_pos.xyz, 1.0f);
+    gl_Position = earthMVP * vec4(calculated_pos.xyz, 1.0f);
 
 
     // Calculate texture coordinate based on data.TexCoord
@@ -49,7 +50,7 @@ void main()
    // vec4 texColor = texture(TexGrey, textureCoordinate);
     data.TexCoord = VertexTex;
     data.Position = gl_Position.xyz;
-    data.Normal = vertexNormal;
+    data.Normal = VertexNormal;
 
     // get texture value, compute height
     // compute normal vector

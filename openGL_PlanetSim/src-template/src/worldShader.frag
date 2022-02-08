@@ -42,9 +42,4 @@ void main()
 
     FragColor = vec4(ambient+diffuse+spec, 1.0f);
     FragColor = vec4(clamp(textureColor.xyz * FragColor.xyz, 0.0,1.0), 1.0);
-     
-
-    //FragColor = texture(TexColor, data.TexCoord);
-    //FragColor = vec4(1,1,1,1);
-
 }
